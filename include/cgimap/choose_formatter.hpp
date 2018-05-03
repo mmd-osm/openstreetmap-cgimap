@@ -20,7 +20,7 @@ mime::type choose_best_mime_type(request &req, responder_ptr_t hptr);
  * passed in as an argument.
  */
 boost::shared_ptr<output_formatter>
-create_formatter(request &req, mime::type best_type,
+create_formatter(request &req, mime::type best_type, bool user_logged_in,
                  boost::shared_ptr<output_buffer>);
 
 #endif /* CHOOSE_FORMATTER_HPP */

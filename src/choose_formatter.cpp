@@ -234,12 +234,13 @@ mime::type choose_best_mime_type(request &req, responder_ptr_t hptr) {
 
 shared_ptr<output_formatter> create_formatter(request &req,
                                               mime::type best_type,
+                                              bool user_logged_in,
                                               shared_ptr<output_buffer> out) {
   shared_ptr<output_formatter> o_formatter;
 
   if (best_type == mime::text_xml) {
     xml_writer *xwriter = new xml_writer(out, true);
-    o_formatter = shared_ptr<output_formatter>(new xml_formatter(xwriter));
+    o_formatter = shared_ptr<output_formatter>(new xml_formatter(xwriter, user_logged_in));
 
 #ifdef HAVE_YAJL
   } else if (best_type == mime::text_json) {

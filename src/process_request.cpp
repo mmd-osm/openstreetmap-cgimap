@@ -95,7 +95,8 @@ void process_not_allowed(request &req) {
 boost::tuple<string, size_t>
 process_get_request(request &req, routes &route,
                     data_selection_ptr selection,
-                    const string &ip, const string &generator) {
+                    const string &ip, const string &generator,
+                    bool user_logged_in) {
   // figure how to handle the request
   handler_ptr_t handler = route(req);
 
@@ -126,7 +127,7 @@ process_get_request(request &req, routes &route,
 
   // create the correct mime type output formatter.
   shared_ptr<output_formatter> o_formatter =
-      create_formatter(req, best_mime_type, out);
+      create_formatter(req, best_mime_type, user_logged_in, out);
 
   try {
     // call to write the response
@@ -359,10 +360,12 @@ void process_request(request &req, rate_limiter &limiter,
     string request_name;
     size_t bytes_written = 0;
 
+    bool user_logged_in = (user_id) ? true : false;
+
     // process request
     if (method == "GET") {
       boost::tie(request_name, bytes_written) =
-        process_get_request(req, route, selection, ip, generator);
+        process_get_request(req, route, selection, ip, generator, user_logged_in);
 
     } else if (method == "HEAD") {
       boost::tie(request_name, bytes_written) =

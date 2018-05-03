@@ -12,13 +12,14 @@
 class xml_formatter : public output_formatter {
 private:
   boost::shared_ptr<xml_writer> writer;
+  bool user_logged_in;
 
   void write_tags(const tags_t &tags);
   void write_common(const element_info &elem);
 
 public:
   // NOTE: takes ownership of the writer!
-  xml_formatter(xml_writer *w);
+  xml_formatter(xml_writer *w, bool user_logged_in);
   virtual ~xml_formatter();
 
   mime::type mime_type() const;

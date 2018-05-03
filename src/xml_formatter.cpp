@@ -30,7 +30,7 @@ const std::string &element_type_name(element_type elt) {
 
 } // anonymous namespace
 
-xml_formatter::xml_formatter(xml_writer *w) : writer(w) {}
+xml_formatter::xml_formatter(xml_writer *w, bool login) : writer(w), user_logged_in(login) {}
 
 xml_formatter::~xml_formatter() {}
 
@@ -117,9 +117,11 @@ void xml_formatter::write_common(const element_info &elem) {
   writer->attribute("id", elem.id);
   writer->attribute("visible", elem.visible);
   writer->attribute("version", elem.version);
-  writer->attribute("changeset", elem.changeset);
+  if (user_logged_in) {
+    writer->attribute("changeset", elem.changeset);
+  }
   writer->attribute("timestamp", elem.timestamp);
-  if (elem.display_name && elem.uid) {
+  if (elem.display_name && elem.uid && user_logged_in) {
     writer->attribute("user", elem.display_name.get());
     writer->attribute("uid", elem.uid.get());
   }
@@ -189,7 +191,7 @@ void xml_formatter::write_changeset(const changeset_info &elem,
   }
   writer->attribute("open", is_open);
 
-  if (bool(elem.display_name) && bool(elem.uid)) {
+  if (bool(elem.display_name) && bool(elem.uid) && user_logged_in) {
     writer->attribute("user", elem.display_name.get());
     writer->attribute("uid", elem.uid.get());
   }
@@ -211,8 +213,10 @@ void xml_formatter::write_changeset(const changeset_info &elem,
          itr != comments.end(); ++itr) {
       writer->start("comment");
       writer->attribute("date", itr->created_at);
-      writer->attribute("uid", itr->author_id);
-      writer->attribute("user", itr->author_display_name);
+      if (user_logged_in) {
+        writer->attribute("uid", itr->author_id);
+        writer->attribute("user", itr->author_display_name);
+      }
       writer->start("text");
       writer->text(itr->body);
       writer->end();
