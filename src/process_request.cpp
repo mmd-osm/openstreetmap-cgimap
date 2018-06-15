@@ -6,6 +6,7 @@
 #include "cgimap/output_formatter.hpp"
 #include "cgimap/output_writer.hpp"
 
+#include <chrono>
 #include <sstream>
 
 #include <boost/date_time.hpp>
@@ -27,6 +28,8 @@ namespace al = boost::algorithm;
 namespace pt = boost::posix_time;
 namespace po = boost::program_options;
 
+
+
 namespace {
 
 // Rails responds to ActiveRecord::RecordNotFound with an empty HTML document.
@@ -39,6 +42,28 @@ void respond_404(const http::not_found &e, request &r) {
   r.add_header("Content-Length", "0");
   r.add_header("Cache-Control", "no-cache");
   r.put("");
+}
+
+void respond_401(const http::unauthorized &e, request &r) {
+  // According to rfc7235 we MUST send a WWW-Authenticate header field
+  logger::message(format("Returning with http error %1% with reason %2%") %
+                  e.code() % e.what());
+
+  std::string message(e.what());
+  std::ostringstream message_size;
+  message_size << message.size();
+
+  r.status(e.code());
+  r.add_header("Content-Type", "text/plain; charset=utf-8");
+//  r.add_header("WWW-Authenticate", R"(Basic realm="OpenStreetMap login required")");
+  r.add_header("WWW-Authenticate", R"(OAuth)");
+  r.add_header("Content-Length", message_size.str());
+  r.add_header("Cache-Control", "no-cache");
+
+  // output the message
+  r.put(message);
+
+  r.finish();
 }
 
 void respond_error(const http::exception &e, request &r) {
@@ -80,9 +105,10 @@ void respond_error(const http::exception &e, request &r) {
 /**
  * Return a 405 error.
  */
-void process_not_allowed(request &req) {
+void process_not_allowed(request &req, handler_ptr_t handler) {
   req.status(405);
-  req.add_header("Allow", "GET, HEAD, OPTIONS");
+  std::string methods = http::list_methods(handler->allowed_methods());
+  req.add_header("Allow", methods);
   req.add_header("Content-Type", "text/html");
   req.add_header("Content-Length", "0");
   req.add_header("Cache-Control", "no-cache");
@@ -93,12 +119,9 @@ void process_not_allowed(request &req) {
  * process a GET request.
  */
 boost::tuple<string, size_t>
-process_get_request(request &req, routes &route,
+process_get_request(request &req, handler_ptr_t handler,
                     data_selection_ptr selection,
                     const string &ip, const string &generator) {
-  // figure how to handle the request
-  handler_ptr_t handler = route(req);
-
   // request start logging
   string request_name = handler->log_name();
   logger::message(format("Started request for %1% from %2%") % request_name %
@@ -156,16 +179,87 @@ process_get_request(request &req, routes &route,
   return boost::make_tuple(request_name, out->written());
 }
 
+
+/**
+ * process a POST request.
+ */
+boost::tuple<string, size_t>
+process_post_request(request &req, handler_ptr_t handler,
+		    data_update_ptr data_update,
+                    const string &payload,
+                    boost::optional<osm_user_id_t> user_id,
+                    const string &ip, const string &generator) {
+  // request start logging
+  string request_name = handler->log_name();
+  logger::message(format("Started request for %1% from %2%") % request_name %
+                  ip);
+
+  boost::shared_ptr< payload_enabled_handler > pe_handler = boost::static_pointer_cast< payload_enabled_handler >(handler);
+
+  if (pe_handler == nullptr)
+    throw http::server_error("HTTP POST method is not payload enabled");
+
+  responder_ptr_t responder = pe_handler->responder(data_update, payload, user_id);
+
+  // get encoding to use
+  shared_ptr<http::encoding> encoding = get_encoding(req);
+
+//  // figure out best mime type
+  //mime::type best_mime_type = choose_best_mime_type(req, responder);
+
+  mime::type best_mime_type = mime::type::text_xml;
+
+  // TODO: use handler/responder to setup response headers.
+  // write the response header
+  req.status(200);
+  req.add_header("Content-Type", (boost::format("%1%; charset=utf-8") %
+                                  mime::to_string(best_mime_type)).str());
+  req.add_header("Content-Encoding", encoding->name());
+  req.add_header("Cache-Control", "private, max-age=0, must-revalidate");
+
+  // create the XML writer with the FCGI streams as output
+  shared_ptr<output_buffer> out = encoding->buffer(req.get_buffer());
+
+  // create the correct mime type output formatter.
+  shared_ptr<output_formatter> o_formatter =
+      create_formatter(req, best_mime_type, out);
+
+  try {
+//    // call to write the response
+    responder->write(o_formatter, generator, req.get_current_time());
+
+    // ensure the request is finished
+    req.finish();
+
+    // make sure all bytes have been written. note that the writer can
+    // throw an exception here, leaving the xml document in a
+    // half-written state...
+    o_formatter->flush();
+    out->flush();
+
+  } catch (const output_writer::write_error &e) {
+    // don't do anything - just go on to the next request.
+    logger::message(format("Caught write error, aborting request: %1%") %
+                    e.what());
+
+  } catch (const std::exception &e) {
+    // errors here are unrecoverable (fatal to the request but maybe
+    // not fatal to the process) since we already started writing to
+    // the client.
+    o_formatter->error(e.what());
+  }
+
+  return boost::make_tuple(request_name, out->written());
+}
+
+
 /**
  * process a HEAD request.
  */
 boost::tuple<string, size_t>
-process_head_request(request &req, routes &route,
+process_head_request(request &req, handler_ptr_t handler,
                      data_selection_ptr selection,
                      const string &ip) {
-  // figure how to handle the request
-  handler_ptr_t handler = route(req);
-
   // request start logging
   string request_name = handler->log_name();
   logger::message(format("Started HEAD request for %1% from %2%") %
@@ -203,13 +297,16 @@ process_head_request(request &req, routes &route,
 /**
  * process an OPTIONS request.
  */
-boost::tuple<string, size_t> process_options_request(request &req) {
+boost::tuple<string, size_t> process_options_request(
+  request &req, handler_ptr_t handler) {
+
   static const string request_name = "OPTIONS";
   const char *origin = req.get_param("HTTP_ORIGIN");
   const char *method = req.get_param("HTTP_ACCESS_CONTROL_REQUEST_METHOD");
 
-  if (origin && method &&
-      (strcasecmp(method, "GET") == 0 || strcasecmp(method, "HEAD") == 0)) {
+  // NOTE: we don't echo back the method - the handler already lists all
+  // the methods it understands.
+  if (origin && method) {
 
     // write the response
     req.status(200);
@@ -225,7 +322,7 @@ boost::tuple<string, size_t> process_options_request(request &req) {
     req.finish();
 
   } else {
-    process_not_allowed(req);
+    process_not_allowed(req, handler);
   }
   return boost::make_tuple(request_name, 0);
 }
@@ -287,12 +384,21 @@ bool show_redactions_requested(request &req) {
 
 } // anonymous namespace
 
+void process_request(request &req, rate_limiter &limiter,
+                     const std::string &generator, routes &route,
+                     boost::shared_ptr<data_selection::factory> factory,
+                     boost::shared_ptr<oauth::store> store)
+{ // TODO: temporary workaround only for test cases
+  process_request(req, limiter, generator, route, factory, boost::shared_ptr<data_update::factory>(nullptr), store);
+}
+
 /**
  * process a single request.
  */
 void process_request(request &req, rate_limiter &limiter,
                      const string &generator, routes &route,
                      boost::shared_ptr<data_selection::factory> factory,
+                     boost::shared_ptr<data_update::factory> update_factory,
                      boost::shared_ptr<oauth::store> store) {
   try {
     // get the client IP address
@@ -335,7 +441,7 @@ void process_request(request &req, rate_limiter &limiter,
       client_key = addr_prefix + ip;
     }
 
-    pt::ptime start_time(pt::second_clock::local_time());
+    auto start_time = std::chrono::high_resolution_clock::now();
 
     // check whether the client is being rate limited
     if (!limiter.check(client_key)) {
@@ -344,8 +450,27 @@ void process_request(request &req, rate_limiter &limiter,
                                            "data. Please try again later.");
     }
 
-    // get the request method
-    string method = fcgi_get_env(req, "REQUEST_METHOD");
+    // fetch and parse the request method
+    boost::optional<http::method> maybe_method =
+      http::parse_method(fcgi_get_env(req, "REQUEST_METHOD"));
+
+    // data returned from request methods
+    string request_name;
+    size_t bytes_written = 0;
+
+    // figure how to handle the request
+    handler_ptr_t handler = route(req);
+
+    // if handler doesn't accept this method, then return method not
+    // allowed.
+    if (!maybe_method || !handler->allows_method(*maybe_method)) {
+      process_not_allowed(req, handler);
+      return;
+    }
+    http::method method = *maybe_method;
+
+    // override the default access control allow methods header
+    req.set_default_methods(handler->allowed_methods());
 
     // create a data selection for the request
     auto selection = factory->make_selection();
@@ -355,24 +480,29 @@ void process_request(request &req, rate_limiter &limiter,
       selection->set_redactions_visible(true);
     }
 
-    // data returned from request methods
-    string request_name;
-    size_t bytes_written = 0;
-
     // process request
-    if (method == "GET") {
+    if (method == http::method::GET) {
       boost::tie(request_name, bytes_written) =
-        process_get_request(req, route, selection, ip, generator);
+        process_get_request(req, handler, selection, ip, generator);
 
-    } else if (method == "HEAD") {
+    } else if (method == http::method::POST) {
+
+      std::string payload = req.get_payload();
+      auto data_update = update_factory->make_data_update();
+
       boost::tie(request_name, bytes_written) =
-          process_head_request(req, route, selection, ip);
+          process_post_request(req, handler, data_update, payload, user_id, ip, generator);
 
-    } else if (method == "OPTIONS") {
-      boost::tie(request_name, bytes_written) = process_options_request(req);
+    } else if (method == http::method::HEAD) {
+      boost::tie(request_name, bytes_written) =
+          process_head_request(req, handler, selection, ip);
+
+    } else if (method == http::method::OPTIONS) {
+      boost::tie(request_name, bytes_written) =
+        process_options_request(req, handler);
 
     } else {
-      process_not_allowed(req);
+      process_not_allowed(req, handler);
     }
 
     // update the rate limiter, if anything was written
@@ -382,11 +512,12 @@ void process_request(request &req, rate_limiter &limiter,
 
     // log the completion time (note: this comes last to avoid
     // logging twice when an error is thrown.)
-    pt::ptime end_time(pt::second_clock::local_time());
+    auto end_time = std::chrono::high_resolution_clock::now();;
+    auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
     logger::message(format("Completed request for %1% from %2% in %3% ms "
                            "returning %4% bytes") %
                     request_name % ip %
-                    (end_time - start_time).total_milliseconds() %
+		    delta %
                     bytes_written);
 
   } catch (const http::not_found &e) {
@@ -395,6 +526,10 @@ void process_request(request &req, rate_limiter &limiter,
     // encoded description of the error. not found errors are special - they're
     // passed back just as empty HTML documents.
     respond_404(e, req);
+
+  } catch (const http::unauthorized &e) {
+    // HTTP/401 unauthorized requires WWW-Authenticate header field
+    respond_401(e, req);
 
   } catch (const http::exception &e) {
     // errors here occur before we've started writing the response

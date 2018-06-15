@@ -1,7 +1,10 @@
 #include "cgimap/fcgi_request.hpp"
+#include "cgimap/http.hpp"
+#include "cgimap/logger.hpp"
 #include "cgimap/output_buffer.hpp"
 #include "cgimap/request_helpers.hpp"
 #include <boost/foreach.hpp>
+#include <iostream>
 #include <stdexcept>
 #include <sstream>
 #include <fcgiapp.h>
@@ -58,6 +61,30 @@ fcgi_request::~fcgi_request() { FCGX_Free(&m_impl->req, true); }
 
 const char *fcgi_request::get_param(const char *key) {
   return FCGX_GetParam(key, m_impl->req.envp);
+}
+
+const std::string fcgi_request::get_payload() {
+
+  // fetch and parse the content length
+  char * content_length_str = FCGX_GetParam("CONTENT_LENGTH", m_impl->req.envp);
+
+  if (!content_length_str)
+    throw http::bad_request("HTTP header 'Content-Length' missing");
+
+  unsigned long content_length = http::parse_content_length(content_length_str);
+
+  if (content_length == 0)
+    return "";
+
+  // TODO: check http://chriswu.me/blog/getting-request-uri-and-content-in-c-plus-plus-fcgi/
+
+  char * content_buffer = new char[content_length];
+  if (FCGX_GetStr(content_buffer, content_length, m_impl->req.in) < content_length)
+    throw http::server_error("Changeset upload: could not read payload");
+
+  std::string content(content_buffer, content_length);
+  delete [] content_buffer;
+  return content;
 }
 
 boost::posix_time::ptime fcgi_request::get_current_time() const {
