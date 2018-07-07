@@ -1,0 +1,18 @@
+.gitignore      export-ignore
+.gitattributes  export-ignore
+.travis.yml     export-ignore
+test-driver     export-ignore
+missing         export-ignore
+compile         export-ignore
+config.guess    export-ignore
+config.sub      export-ignore
+depcomp         export-ignore
+INSTALL         export-ignore
+install-sh      export-ignore
+ltmain.sh                 export-ignore
+aclocal/libtool.m4        export-ignore
+aclocal/lt~obsolete.m4    export-ignore
+aclocal/ltoptions.m4      export-ignore
+aclocal/ltsugar.m4        export-ignore
+aclocal/ltversion.m4      export-ignore
+
