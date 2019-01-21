@@ -20,10 +20,17 @@ addons:
       - libpqxx-dev
       - libxml2-dev
       - libyajl-dev
+      - lcov
 script:
   - ./autogen.sh
-  - ./configure --enable-yajl CC="ccache gcc" CXX="ccache g++"
+  - ./configure --enable-yajl CC="ccache gcc" CXX="ccache g++" CXXFLAGS="-coverage"
   - make
   - make check
+  - lcov --capture --directory . --output-file ~/coverage.info
+  - lcov --remove ~/coverage.info '/usr/*' --output-file ~/coverage.info
+  - lcov --list ~/coverage.info
 after_failure:
   - cat test-suite.log
+after_success:
+  - bash <(curl -s https://codecov.io/bash) -f ~/coverage.info
+
