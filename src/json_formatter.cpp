@@ -1,12 +1,12 @@
-#include <boost/shared_ptr.hpp>
 
 #include "cgimap/json_formatter.hpp"
 #include "cgimap/config.hpp"
 
-using boost::shared_ptr;
+#include <chrono>
+
+using std::shared_ptr;
 using std::string;
 using std::transform;
-namespace pt = boost::posix_time;
 
 namespace {
 
@@ -31,7 +31,7 @@ const std::string &element_type_name(element_type elt) {
 json_formatter::json_formatter(json_writer *w) : writer(w),
     is_in_elements_array(false) {}
 
-json_formatter::~json_formatter() {}
+json_formatter::~json_formatter() = default;
 
 mime::type json_formatter::mime_type() const { return mime::text_json; }
 
@@ -211,7 +211,7 @@ void json_formatter::write_changeset(const changeset_info &elem,
                                      const tags_t &tags,
                                      bool include_comments,
                                      const comments_t &comments,
-                                     const pt::ptime &now) {
+                                     const std::chrono::system_clock::time_point &now) {
 
   writer->start_object();
 

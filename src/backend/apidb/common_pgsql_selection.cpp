@@ -1,8 +1,9 @@
 #include "cgimap/backend/apidb/common_pgsql_selection.hpp"
 #include "cgimap/backend/apidb/apidb.hpp"
 
-namespace pt = boost::posix_time;
-using boost::shared_ptr;
+#include <chrono>
+
+using std::shared_ptr;
 
 namespace {
 
@@ -79,8 +80,8 @@ void extract_tags(const pqxx::result::tuple &row, tags_t &tags) {
 void extract_nodes(const pqxx::result::tuple &row, nodes_t &nodes) {
   nodes.clear();
   std::vector<std::string> ids = psql_array_to_vector(row["node_ids"].c_str());
-  for (int i=0; i<ids.size(); i++)
-    nodes.push_back(boost::lexical_cast<osm_nwr_id_t>(ids[i]));
+  for (const auto & id : ids)
+    nodes.push_back(boost::lexical_cast<osm_nwr_id_t>(id));
 }
 
 element_type type_from_name(const char *name) {
@@ -240,7 +241,7 @@ void extract_relations(
 
 void extract_changesets(
   const pqxx::result &rows, output_formatter &formatter,
-  cache<osm_changeset_id_t, changeset> &cc, const pt::ptime &now,
+  cache<osm_changeset_id_t, changeset> &cc, const std::chrono::system_clock::time_point &now,
   bool include_changeset_discussions) {
 
   changeset_info elem;

@@ -1,6 +1,6 @@
 #include "cgimap/data_selection.hpp"
 
-data_selection::~data_selection() {}
+data_selection::~data_selection() = default;
 
 bool data_selection::supports_historical_versions() {
   return false;
@@ -40,7 +40,7 @@ int data_selection::select_historical_by_changesets(
     "versions or changesets");
 }
 
-void data_selection::write_changesets(output_formatter &, const boost::posix_time::ptime &) {
+void data_selection::write_changesets(output_formatter &, const std::chrono::system_clock::time_point &) {
 }
 
 bool data_selection::supports_changesets() {
@@ -68,7 +68,7 @@ bool data_selection::get_user_id_pass(const std::string&, osm_user_id_t &, std::
 }
 
 
-data_selection::factory::~factory() {}
+data_selection::factory::~factory() = default;
 
 
 std::vector<std::string> psql_array_to_vector(std::string str) {

@@ -1,6 +1,11 @@
 #ifndef TEST_TEST_REQUEST_HPP
 #define TEST_TEST_REQUEST_HPP
 
+#include <chrono>
+#include <fstream>
+#include <map>
+#include <sstream>
+
 #include "cgimap/request.hpp"
 #include "cgimap/output_buffer.hpp"
 
@@ -40,21 +45,21 @@ struct test_request : public request {
   void set_header(const std::string &k, const std::string &v);
   std::stringstream &buffer();
 
-  boost::posix_time::ptime get_current_time() const;
-  void set_current_time(const boost::posix_time::ptime &now);
+  std::chrono::system_clock::time_point get_current_time() const;
+  void set_current_time(const std::chrono::system_clock::time_point &now);
 
   int response_status() const;
 
 protected:
   virtual void write_header_info(int status, const headers_t &headers);
-  virtual boost::shared_ptr<output_buffer> get_buffer_internal();
+  virtual std::shared_ptr<output_buffer> get_buffer_internal();
   virtual void finish_internal();
 
 private:
   int m_status;
   std::stringstream m_output;
   std::map<std::string, std::string> m_params;
-  boost::posix_time::ptime m_now;
+  std::chrono::system_clock::time_point m_now;
   std::string m_payload;
 };
 

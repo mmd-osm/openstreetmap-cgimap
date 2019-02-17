@@ -1,14 +1,11 @@
 #include <iostream>
 #include <stdexcept>
-#include <boost/noncopyable.hpp>
 #include <boost/format.hpp>
-#include <boost/foreach.hpp>
 #include <boost/optional/optional_io.hpp>
-#include <boost/make_shared.hpp>
 #include <boost/program_options.hpp>
 
 #include <sys/time.h>
-#include <stdio.h>
+#include <cstdio>
 
 #include "cgimap/config.hpp"
 #include "cgimap/time.hpp"
@@ -49,7 +46,7 @@ void test_negative_changeset_ids(test_database &tdb) {
     "  (6, 90000000, 90000000,  0, true,  '2016-04-16T15:09:00Z', 3229120632, 1), "
     "  (7, 90000000, 90000000, -1, true,  '2016-04-16T15:09:00Z', 3229120632, 1); "
     );
-  boost::shared_ptr<data_selection> sel = tdb.get_data_selection();
+  std::shared_ptr<data_selection> sel = tdb.get_data_selection();
 
   assert_equal<data_selection::visibility_t>(
     sel->check_node_visibility(6), data_selection::exists,
@@ -94,7 +91,7 @@ void test_changeset(test_database &tdb) {
     "VALUES "
     "  (1, 1, '2013-11-14T02:10:00Z', '2013-11-14T03:10:00Z', 2);"
     );
-  boost::shared_ptr<data_selection> sel = tdb.get_data_selection();
+  std::shared_ptr<data_selection> sel = tdb.get_data_selection();
 
   assert_equal<bool>(sel->supports_changesets(), true,
                      "apidb should support changesets.");
@@ -104,7 +101,7 @@ void test_changeset(test_database &tdb) {
   int num = sel->select_changesets(ids);
   assert_equal<int>(num, 1, "should have selected one changeset.");
 
-  boost::posix_time::ptime t = parse_time("2015-09-05T17:15:33Z");
+  std::chrono::system_clock::time_point t = parse_time("2015-09-05T17:15:33Z");
 
   test_formatter f;
   sel->write_changesets(f, t);
@@ -141,7 +138,7 @@ void test_nonpublic_changeset(test_database &tdb) {
     "VALUES "
     "  (4, 2, '2013-11-14T02:10:00Z', '2013-11-14T03:10:00Z', 1);"
     );
-  boost::shared_ptr<data_selection> sel = tdb.get_data_selection();
+  std::shared_ptr<data_selection> sel = tdb.get_data_selection();
 
   assert_equal<bool>(sel->supports_changesets(), true,
                      "apidb should support changesets.");
@@ -151,7 +148,7 @@ void test_nonpublic_changeset(test_database &tdb) {
   int num = sel->select_changesets(ids);
   assert_equal<int>(num, 1, "should have selected one changeset.");
 
-  boost::posix_time::ptime t = parse_time("2015-09-05T20:13:23Z");
+  std::chrono::system_clock::time_point t = parse_time("2015-09-05T20:13:23Z");
 
   test_formatter f;
   sel->write_changesets(f, t);
@@ -193,7 +190,7 @@ void test_changeset_with_tags(test_database &tdb) {
     "  (2, 'test_key', 'test_value'), "
     "  (2, 'test_key2', 'test_value2'); "
     );
-  boost::shared_ptr<data_selection> sel = tdb.get_data_selection();
+  std::shared_ptr<data_selection> sel = tdb.get_data_selection();
 
   assert_equal<bool>(sel->supports_changesets(), true,
                      "apidb should support changesets.");
@@ -203,7 +200,7 @@ void test_changeset_with_tags(test_database &tdb) {
   int num = sel->select_changesets(ids);
   assert_equal<int>(num, 1, "should have selected one changeset.");
 
-  boost::posix_time::ptime t = parse_time("2015-09-05T20:33:00Z");
+  std::chrono::system_clock::time_point t = parse_time("2015-09-05T20:33:00Z");
 
   test_formatter f;
   sel->write_changesets(f, t);
@@ -234,7 +231,7 @@ void test_changeset_with_tags(test_database &tdb) {
 }
 
 void check_changeset_with_comments_impl(
-  boost::shared_ptr<data_selection> sel,
+  std::shared_ptr<data_selection> sel,
   bool include_discussion) {
 
   assert_equal<bool>(sel->supports_changesets(), true,
@@ -249,7 +246,7 @@ void check_changeset_with_comments_impl(
     sel->select_changeset_discussions();
   }
 
-  boost::posix_time::ptime t = parse_time("2015-09-05T20:38:00Z");
+  std::chrono::system_clock::time_point t = parse_time("2015-09-05T20:38:00Z");
 
   test_formatter f;
   sel->write_changesets(f, t);
@@ -304,7 +301,7 @@ void test_changeset_with_comments(test_database &tdb) {
     );
 
   try {
-    boost::shared_ptr<data_selection> sel = tdb.get_data_selection();
+    std::shared_ptr<data_selection> sel = tdb.get_data_selection();
     check_changeset_with_comments_impl(sel, false);
 
   } catch (const std::exception &e) {
@@ -314,7 +311,7 @@ void test_changeset_with_comments(test_database &tdb) {
   }
 
   try {
-    boost::shared_ptr<data_selection> sel = tdb.get_data_selection();
+    std::shared_ptr<data_selection> sel = tdb.get_data_selection();
     check_changeset_with_comments_impl(sel, true);
 
   } catch (const std::exception &e) {
@@ -331,19 +328,19 @@ int main(int, char **) {
     test_database tdb;
     tdb.setup();
 
-    tdb.run(boost::function<void(test_database&)>(
+    tdb.run(std::function<void(test_database&)>(
               &test_negative_changeset_ids));
 
-    tdb.run(boost::function<void(test_database&)>(
+    tdb.run(std::function<void(test_database&)>(
               &test_changeset));
 
-    tdb.run(boost::function<void(test_database&)>(
+    tdb.run(std::function<void(test_database&)>(
               &test_nonpublic_changeset));
 
-    tdb.run(boost::function<void(test_database&)>(
+    tdb.run(std::function<void(test_database&)>(
               &test_changeset_with_tags));
 
-    tdb.run(boost::function<void(test_database&)>(
+    tdb.run(std::function<void(test_database&)>(
               &test_changeset_with_comments));
 
   } catch (const test_database::setup_error &e) {

@@ -8,12 +8,12 @@
 #include "cgimap/data_selection.hpp"
 #include "cgimap/http.hpp"
 
+#include <chrono>
 #include <list>
 #include <set>
 #include <string>
 #include <memory>
-#include <boost/shared_ptr.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
+
 
 /**
  * object which is able to respond to an already-setup request.
@@ -22,9 +22,9 @@ class responder {
 public:
   responder(mime::type);
   virtual ~responder();
-  virtual void write(boost::shared_ptr<output_formatter> f,
+  virtual void write(std::shared_ptr<output_formatter> f,
                      const std::string &generator,
-                     const boost::posix_time::ptime &now) = 0;
+                     const std::chrono::system_clock::time_point &now) = 0;
 
   mime::type resource_type() const;
 
@@ -38,7 +38,7 @@ private:
   mime::type mime_type;
 };
 
-typedef boost::shared_ptr<responder> responder_ptr_t;
+using responder_ptr_t = std::shared_ptr<responder>;
 
 /**
  * object which is able to validate and create responders from
@@ -69,7 +69,7 @@ protected:
   http::method m_allowed_methods;
 };
 
-typedef boost::shared_ptr<handler> handler_ptr_t;
+using handler_ptr_t = std::shared_ptr<handler>;
 
 
 class payload_enabled_handler : public handler {
@@ -78,6 +78,9 @@ public:
     http::method methods = http::method::POST | http::method::OPTIONS);
 
   virtual responder_ptr_t responder(data_update_ptr &, const std::string & payload, boost::optional<osm_user_id_t> user_id) const = 0;
+
+private:
+  using handler::responder;
 };
 
 #endif /* HANDLER_HPP */

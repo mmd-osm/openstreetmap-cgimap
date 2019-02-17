@@ -4,6 +4,8 @@
 #include "cgimap/data_selection.hpp"
 #include "cgimap/backend/apidb/changeset.hpp"
 #include "cgimap/backend/apidb/cache.hpp"
+#include <chrono>
+#include <memory>
 #include <pqxx/pqxx>
 #include <boost/program_options.hpp>
 
@@ -21,7 +23,7 @@ public:
   void write_nodes(output_formatter &formatter);
   void write_ways(output_formatter &formatter);
   void write_relations(output_formatter &formatter);
-  void write_changesets(output_formatter &formatter, const boost::posix_time::ptime &now);
+  void write_changesets(output_formatter &formatter, const std::chrono::system_clock::time_point &now);
 
   visibility_t check_node_visibility(osm_nwr_id_t id);
   visibility_t check_way_visibility(osm_nwr_id_t id);
@@ -66,13 +68,11 @@ public:
   public:
     factory(const boost::program_options::variables_map &);
     virtual ~factory();
-    virtual boost::shared_ptr<data_selection> make_selection();
+    virtual std::shared_ptr<data_selection> make_selection();
 
   private:
     pqxx::connection m_connection, m_cache_connection;
-#if PQXX_VERSION_MAJOR >= 4
     pqxx::quiet_errorhandler m_errorhandler, m_cache_errorhandler;
-#endif
     pqxx::nontransaction m_cache_tx;
     cache<osm_changeset_id_t, changeset> m_cache;
   };
