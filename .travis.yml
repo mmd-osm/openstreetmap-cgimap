@@ -2,7 +2,6 @@ sudo: required
 dist: xenial
 language: cpp
 compiler: gcc
-cache: ccache
 addons:
   postgresql: 9.4
   apt:
@@ -23,7 +22,7 @@ addons:
       - lcov
 script:
   - ./autogen.sh
-  - ./configure --enable-yajl CC="ccache gcc" CXX="ccache g++" CXXFLAGS="-coverage"
+  - ./configure --enable-yajl CXXFLAGS="-coverage"
   - make
   - make check
   - lcov --capture --directory /home/travis/build/mmd-osm/openstreetmap-cgimap --output-file ~/coverage.info
