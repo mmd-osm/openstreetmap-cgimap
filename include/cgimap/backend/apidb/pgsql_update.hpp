@@ -31,6 +31,8 @@ public:
 
   void commit();
 
+  void rollback();
+
   bool is_readonly();
 
   /**

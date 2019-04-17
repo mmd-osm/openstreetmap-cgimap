@@ -142,6 +142,10 @@ void pgsql_update::commit() {
   m.commit();
 }
 
+void pgsql_update::rollback() {
+  m.rollback();
+}
+
 
 pgsql_update::factory::factory(const po::variables_map &opts)
     : m_connection(connect_db_str(opts)), m_readonly(false)

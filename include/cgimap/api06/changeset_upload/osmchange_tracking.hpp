@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include "cgimap/types.hpp"
@@ -33,8 +34,52 @@ public:
     // the following fields will be populated once the whole message has been processed
     object_id_mapping_t mapping;
     bool deletion_skipped;         // if-unused flag was set, and object could not be deleted
-
   };
+
+
+  // serialize osmchange_orig_sequence contents into a string
+  std::string serialize() {
+
+    std::string space{" "};
+    std::stringstream ss;
+    for (const auto & r : osmchange_orig_sequence) {
+      ss << static_cast<int>(r.op) << space
+             << static_cast<int>(r.obj_type) << space
+	     << r.orig_id << space
+	     << r.mapping.old_id << space
+	     << r.mapping.new_id << space
+	     << r.mapping.new_version << space
+	     << r.deletion_skipped
+	     << "\n";
+    }
+
+    return ss.str();
+  }
+
+  // deserialize string into osmchange_orig_sequence
+  void deserialize(const std::string & payload) {
+    osmchange_orig_sequence.clear();
+
+    std::istringstream f(payload);
+    std::string line;
+    while (std::getline(f, line)) {
+	osmchange_t row;
+	std::stringstream ss(line);
+	int _op;
+	int _obj_type;
+	ss >> _op
+	   >> _obj_type
+	   >> row.orig_id
+	   >> row.mapping.old_id
+	   >> row.mapping.new_id
+	   >> row.mapping.new_version
+	   >> row.deletion_skipped;
+	row.op = static_cast< operation >(_op);
+	row.obj_type = static_cast< object_type >(_obj_type);
+	osmchange_orig_sequence.push_back(row);
+    }
+
+  }
 
   // created objects are kept separately for id replacement purposes
   std::vector<object_id_mapping_t> created_node_ids;

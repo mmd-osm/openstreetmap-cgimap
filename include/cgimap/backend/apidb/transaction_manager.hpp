@@ -21,6 +21,8 @@ public:
                     const std::string &description = std::string());
   void commit();
 
+  void rollback();
+
   template<typename... Args>
   pqxx::result exec_prepared(const std::string &statement, Args&&... args) {
 

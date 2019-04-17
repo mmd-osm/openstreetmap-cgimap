@@ -152,3 +152,74 @@ void ApiDB_Changeset_Updater::update_changeset(const uint32_t num_new_changes,
       throw http::server_error("Cannot update changeset");
   }
 }
+
+/*
+
+
+CREATE TABLE changeset_idempotency_cache
+(
+  id bigint NOT NULL,
+  idempotency_key character varying,
+  hash_value character varying,
+  "timestamp" timestamp without time zone,
+  payload character varying,
+  CONSTRAINT changeset_idempotency_cache_pk PRIMARY KEY (id),
+  CONSTRAINT changeset_idempotency_cache_fk FOREIGN KEY (id)
+      REFERENCES public.changesets (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+
+ */
+
+
+bool ApiDB_Changeset_Updater::load_from_cache_by_idempotency_key(const std::string & idempotency_key,
+								 std::string & cached_payload,
+								 std::string & hash_value)
+{
+    cached_payload = "";
+    hash_value = "";
+
+    m.prepare("load_from_cache_by_idempotency_key",
+	      R"( SELECT payload, hash_value
+		  FROM changeset_idempotency_cache
+		  WHERE id = $1 AND
+                        idempotency_key = $2)");
+
+    pqxx::result r = m.prepared("load_from_cache_by_idempotency_key")(changeset)(idempotency_key).exec();
+
+    if (r.affected_rows() != 1)
+      return false;  // cached entry was not found
+
+    cached_payload = r[0]["payload"].as<std::string>();
+    hash_value     = r[0]["hash_value"].as<std::string>();
+
+    return true;
+}
+
+void ApiDB_Changeset_Updater::save_to_cache_by_idempotency_key(const std::string idempotency_key,
+							       const std::string cached_string,
+							       const std::string hash_value)
+{
+
+  {
+    m.prepare("clear_cache_by_idempotency_key",
+		R"( DELETE
+		    FROM changeset_idempotency_cache
+		    WHERE id = $1  )");
+
+    pqxx::result r = m.prepared("clear_cache_by_idempotency_key")(changeset).exec();
+  }
+
+  {
+    m.prepare("save_to_cache_by_idempotency_key",
+		R"( INSERT INTO changeset_idempotency_cache(id, idempotency_key, hash_value, timestamp, payload)
+		    VALUES ($1, $2, $3, now() at time zone 'utc', $4) )");
+
+    pqxx::result r = m.prepared("save_to_cache_by_idempotency_key")(changeset)(idempotency_key)(hash_value)(cached_string).exec();
+
+    if (r.affected_rows() != 1)
+      throw http::server_error("Could not store changeset for Idempotency-Key");
+  }
+
+}
+

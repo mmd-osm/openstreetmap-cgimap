@@ -20,6 +20,10 @@ public:
 
   void update_changeset(const uint32_t num_new_changes, const bbox_t bbox);
 
+  bool load_from_cache_by_idempotency_key(const std::string & idempotency_key, std::string & cached_string, std::string & hash_value);
+
+  void save_to_cache_by_idempotency_key(const std::string idempotency_key, const std::string cached_string, const std::string hash_value);
+
 private:
   Transaction_Manager &m;
   uint32_t cs_num_changes;

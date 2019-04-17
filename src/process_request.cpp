@@ -11,6 +11,8 @@
 #include <sstream>
 #include <tuple>
 
+#include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
@@ -204,6 +206,33 @@ process_get_request(request &req, handler_ptr_t handler,
   return std::make_tuple(request_name, out->written());
 }
 
+std::string get_idempotency_key(request &req)
+{
+  std::string idempotency_key = "";
+  const char * id_key = req.get_param("HTTP_IDEMPOTENCY_KEY");
+  if (id_key != nullptr)
+    idempotency_key = std::string(id_key);
+
+  if (idempotency_key.size() > 50)
+    throw http::bad_request("Idempotency-Key may not be longer than 50 bytes");
+
+  if (idempotency_key.empty())
+    return idempotency_key;
+
+  try {
+      boost::smatch sm;
+      boost::regex r(R"([A-Za-z0-9\-]+)");
+
+      if (!boost::regex_match(idempotency_key, sm, r))
+	throw http::bad_request("Idempotency-Key contains non-permitted characters");
+
+  } catch (boost::regex_error&) {
+    throw http::server_error("Regexp error in get_idempotency_key");
+  }
+
+  return idempotency_key;
+}
+
 
 /**
  * process a POST request.
@@ -224,7 +253,9 @@ process_post_request(request &req, handler_ptr_t handler,
   if (pe_handler == nullptr)
     throw http::server_error("HTTP POST method is not payload enabled");
 
-  responder_ptr_t responder = pe_handler->responder(data_update, payload, user_id);
+  std::string idempotency_key = get_idempotency_key(req);
+
+  responder_ptr_t responder = pe_handler->responder(data_update, payload, idempotency_key, user_id);
 
   // get encoding to use
   shared_ptr<http::encoding> encoding = get_encoding(req);

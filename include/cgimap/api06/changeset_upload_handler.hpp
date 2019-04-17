@@ -12,6 +12,7 @@ namespace api06 {
 class changeset_upload_responder : public osm_diffresult_responder {
 public:
   changeset_upload_responder(mime::type, data_update_ptr &, osm_changeset_id_t,
+			     const std::string &,
                              const std::string &,
                              boost::optional<osm_user_id_t>);
   ~changeset_upload_responder();
@@ -30,6 +31,7 @@ public:
 
   responder_ptr_t responder(data_update_ptr &,
 			    const std::string &payload,
+			    const std::string &idempotency_key,
                             boost::optional<osm_user_id_t> user_id) const;
 
 private:
