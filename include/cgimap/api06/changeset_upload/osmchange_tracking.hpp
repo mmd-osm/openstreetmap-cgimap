@@ -40,18 +40,26 @@ public:
   // serialize osmchange_orig_sequence contents into a string
   std::string serialize() {
 
-    std::string space{" "};
+    bool first = true;
     std::stringstream ss;
+
+    ss << "[";
     for (const auto & r : osmchange_orig_sequence) {
-      ss << static_cast<int>(r.op) << space
-             << static_cast<int>(r.obj_type) << space
-	     << r.orig_id << space
-	     << r.mapping.old_id << space
-	     << r.mapping.new_id << space
-	     << r.mapping.new_version << space
-	     << r.deletion_skipped
-	     << "\n";
+
+      if (!first)
+	ss << ",";
+
+      ss<< "{"
+        << "\"op\": "           << static_cast<int>(r.op)
+        << ",\"type\": "        << static_cast<int>(r.obj_type)
+	<< ",\"skipped\": "     << r.deletion_skipped
+	<< ",\"old_id\": "      << r.mapping.old_id
+	<< ",\"new_id\": "      << r.mapping.new_id
+	<< ",\"new_version\": " << r.mapping.new_version
+	<< "}";
+      first = false;
     }
+    ss << "]";
 
     return ss.str();
   }
@@ -69,11 +77,10 @@ public:
 	int _obj_type;
 	ss >> _op
 	   >> _obj_type
-	   >> row.orig_id
+	   >> row.deletion_skipped
 	   >> row.mapping.old_id
 	   >> row.mapping.new_id
-	   >> row.mapping.new_version
-	   >> row.deletion_skipped;
+	   >> row.mapping.new_version;
 	row.op = static_cast< operation >(_op);
 	row.obj_type = static_cast< object_type >(_obj_type);
 	osmchange_orig_sequence.push_back(row);

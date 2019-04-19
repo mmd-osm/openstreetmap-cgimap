@@ -109,6 +109,7 @@ void OSMChange_Tracking::populate_orig_sequence_mapping() {
 		  auto it = set_delete_ids.find(std::make_pair(item.obj_type, item.orig_id));
 		  if (it != set_delete_ids.end()) {
 		      item.deletion_skipped = false;
+		      item.mapping.old_id = item.orig_id;
 		  }
 		  else {
 		      throw std::runtime_error ("Element in osmChange message was not processed");
@@ -119,8 +120,8 @@ void OSMChange_Tracking::populate_orig_sequence_mapping() {
 	  if (!item.if_unused) {
 	      auto it = set_delete_ids.find(std::make_pair(item.obj_type, item.orig_id));
 	      if (it != set_delete_ids.end()) {
-
 		  item.deletion_skipped = false;
+		  item.mapping.old_id = item.orig_id;
 	      }
 	      else {
 		  throw std::runtime_error ("Element in osmChange message was not processed");

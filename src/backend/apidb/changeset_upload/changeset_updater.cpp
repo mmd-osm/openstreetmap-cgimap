@@ -162,7 +162,7 @@ CREATE TABLE changeset_idempotency_cache
   idempotency_key character varying,
   hash_value character varying,
   "timestamp" timestamp without time zone,
-  payload character varying,
+  payload jsonb,
   CONSTRAINT changeset_idempotency_cache_pk PRIMARY KEY (id),
   CONSTRAINT changeset_idempotency_cache_fk FOREIGN KEY (id)
       REFERENCES public.changesets (id) MATCH SIMPLE
@@ -180,10 +180,24 @@ bool ApiDB_Changeset_Updater::load_from_cache_by_idempotency_key(const std::stri
     hash_value = "";
 
     m.prepare("load_from_cache_by_idempotency_key",
-	      R"( SELECT payload, hash_value
-		  FROM changeset_idempotency_cache
-		  WHERE id = $1 AND
-                        idempotency_key = $2)");
+    R"(
+	  select q.hash_value, string_agg(q.row, E'\n') as payload  FROM (
+	  
+	  select concat_ws(' ', op, type, skipped, old_id, new_id, new_version) as row,
+		 hash_value
+	       from changeset_idempotency_cache 
+	       join lateral jsonb_to_recordset(payload) as 
+		    r("op" integer, 
+		      "type" integer, 
+		      "skipped" integer,
+		      "old_id" bigint,
+		      "new_id" bigint,
+		      "new_version" bigint)
+	       on true
+	  where id = $1 AND idempotency_key = $2) q
+	  GROUP BY q.hash_value;
+    
+    )");
 
     pqxx::result r = m.prepared("load_from_cache_by_idempotency_key")(changeset)(idempotency_key).exec();
 

@@ -61,7 +61,7 @@ void osm_diffresult_responder::write(shared_ptr<output_formatter> formatter,
               item.mapping.new_id, item.mapping.new_version);
         else
           fmt.write_diffresult_delete(as_elem_type(item.obj_type),
-                                      item.orig_id);
+				      item.mapping.old_id);
         break;
 
       case operation::op_undefined:

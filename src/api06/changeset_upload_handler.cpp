@@ -17,6 +17,7 @@
 #include "cgimap/types.hpp"
 #include "cgimap/util.hpp"
 
+#include <fstream>
 #include <sstream>
 
 #include <boost/format.hpp>
@@ -100,6 +101,10 @@ changeset_upload_responder::changeset_upload_responder(
       std::string hash_value = sha256_hash(payload);
       std::string payload = change_tracking->serialize();
       changeset_updater->save_to_cache_by_idempotency_key(idempotency_key, payload, hash_value);
+
+//      std::ofstream out("/tmp/" + idempotency_key);
+//      out << payload;
+//      out.close();
   }
 
   changeset_updater->update_changeset(handler.get_num_changes(),
