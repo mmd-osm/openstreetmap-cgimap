@@ -27,7 +27,7 @@ void ApiDB_Changeset_Updater::lock_current_changeset() {
 		  FROM changesets
 		  WHERE id = $1)");
 
-    pqxx::result r = m.prepared("changeset_exists")(changeset).exec();
+    pqxx::result r = m.exec_prepared("changeset_exists", changeset);
 
     if (r.affected_rows() != 1)
       throw http::not_found("");
@@ -53,7 +53,7 @@ void ApiDB_Changeset_Updater::lock_current_changeset() {
                 FOR UPDATE 
              )");
 
-  pqxx::result r = m.prepared("changeset_current_lock")(changeset)(uid).exec();
+  pqxx::result r = m.exec_prepared("changeset_current_lock", changeset, uid);
 
   if (r.affected_rows() != 1)
     throw http::conflict("The user doesn't own that changeset");
@@ -136,15 +136,14 @@ void ApiDB_Changeset_Updater::update_changeset(const uint32_t num_new_changes,
 
   if (valid_bbox) {
     pqxx::result r =
-        m.prepared("changeset_update")(cs_num_changes)(cs_bbox.minlat)(
-             cs_bbox.minlon)(cs_bbox.maxlat)(cs_bbox.maxlon)(MAX_TIME_OPEN)(
-             IDLE_TIMEOUT)(changeset)
-            .exec();
+        m.exec_prepared("changeset_update", cs_num_changes, cs_bbox.minlat,
+             cs_bbox.minlon, cs_bbox.maxlat, cs_bbox.maxlon, MAX_TIME_OPEN,
+             IDLE_TIMEOUT, changeset);
 
     if (r.affected_rows() != 1)
       throw http::server_error("Cannot update changeset");
   } else {
-    pqxx::result r = m.prepared("changeset_update")(cs_num_changes)()()()()(
+    pqxx::result r = m.prepared("changeset_update")(cs_num_changes)()()()()(              // TODO
                           MAX_TIME_OPEN)(IDLE_TIMEOUT)(changeset)
                          .exec();
 
@@ -199,7 +198,7 @@ bool ApiDB_Changeset_Updater::load_from_cache_by_idempotency_key(const std::stri
     
     )");
 
-    pqxx::result r = m.prepared("load_from_cache_by_idempotency_key")(changeset)(idempotency_key).exec();
+    pqxx::result r = m.exec_prepared("load_from_cache_by_idempotency_key", changeset, idempotency_key);
 
     if (r.affected_rows() != 1)
       return false;  // cached entry was not found
@@ -221,7 +220,7 @@ void ApiDB_Changeset_Updater::save_to_cache_by_idempotency_key(const std::string
 		    FROM changeset_idempotency_cache
 		    WHERE id = $1  )");
 
-    pqxx::result r = m.prepared("clear_cache_by_idempotency_key")(changeset).exec();
+    pqxx::result r = m.exec_prepared("clear_cache_by_idempotency_key", changeset);
   }
 
   {
@@ -229,7 +228,7 @@ void ApiDB_Changeset_Updater::save_to_cache_by_idempotency_key(const std::string
 		R"( INSERT INTO changeset_idempotency_cache(id, idempotency_key, hash_value, timestamp, payload)
 		    VALUES ($1, $2, $3, now() at time zone 'utc', $4) )");
 
-    pqxx::result r = m.prepared("save_to_cache_by_idempotency_key")(changeset)(idempotency_key)(hash_value)(cached_string).exec();
+    pqxx::result r = m.exec_prepared("save_to_cache_by_idempotency_key", changeset, idempotency_key, hash_value, cached_string);
 
     if (r.affected_rows() != 1)
       throw http::server_error("Could not store changeset for Idempotency-Key");
