@@ -52,9 +52,8 @@ void respond_401(const http::unauthorized &e, request &r) {
 
   r.status(e.code());
   r.add_header("Content-Type", "text/plain; charset=utf-8");
-  r.add_header("WWW-Authenticate", R"(OAuth realm="OpenStreetMap login required")");
   // Header according to RFC 7617, section 2.1
-  r.add_header("WWW-Authenticate", R"(Basic realm="OpenStreetMap login required", charset="UTF-8")");
+  r.add_header("WWW-Authenticate", R"(Basic realm="Web Password", charset="UTF-8")");
   r.add_header("Content-Length", message_size.str());
   r.add_header("Cache-Control", "no-cache");
 
@@ -535,7 +534,7 @@ void process_request(request &req, rate_limiter &limiter,
 
       auto data_update = update_factory->make_data_update();
 
-      if (data_update->is_readonly())
+      if (data_update->is_api_write_disabled())
         throw http::bad_request("Server is currently in read only mode, no database changes allowed at this time");
 
       std::string payload = req.get_payload();

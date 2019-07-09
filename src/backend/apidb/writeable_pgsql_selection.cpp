@@ -14,8 +14,10 @@
 #include <list>
 #include <vector>
 
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/iterator/transform_iterator.hpp>
+
 
 namespace po = boost::program_options;
 using std::set;
@@ -379,13 +381,20 @@ bool writeable_pgsql_selection::is_user_blocked(const osm_user_id_t id) {
   return !res.empty();
 }
 
-bool writeable_pgsql_selection::get_user_id_pass(const std::string& display_name, osm_user_id_t & id,
+bool writeable_pgsql_selection::get_user_id_pass(const std::string& user_name, osm_user_id_t & id,
 						 std::string & pass_crypt, std::string & pass_salt) {
 
-  auto res = w.prepared("get_user_id_pass")(display_name).exec();
+  std::string email = boost::algorithm::trim_copy(user_name);
 
-  if (res.empty())
-    return false;
+  auto res = w.prepared("get_user_id_pass")(email)(user_name).exec();
+
+  if (res.empty()) {
+    // try case insensitive query
+    res = w.prepared("get_user_id_pass_case_insensitive")(email)(user_name).exec();
+    // failure, in case no entries or multiple entries were found
+    if (res.size() != 1)
+      return false;
+  }
 
   auto row = res[0];
   id = row["id"].as<osm_user_id_t>();
@@ -664,7 +673,8 @@ writeable_pgsql_selection::factory::factory(const po::variables_map &opts)
           "ON n.node_id = tn.node_id AND n.version = tn.version "
         "LEFT JOIN node_tags t "
           "ON n.node_id = t.node_id AND n.version = t.version "
-      "GROUP BY n.node_id, n.version");
+      "GROUP BY n.node_id, n.version "
+      "ORDER BY n.node_id, n.version");
   m_connection.prepare("extract_historic_node_tags",
     "SELECT k, v FROM node_tags WHERE node_id=$1 AND version=$2");
 
@@ -694,13 +704,14 @@ writeable_pgsql_selection::factory::factory(const po::variables_map &opts)
           "ON w.way_id = tw.way_id AND w.version = tw.version "
         "LEFT JOIN LATERAL "
           "(SELECT array_agg(k) AS keys, array_agg(v) AS values "
-          "FROM way_tags WHERE w.way_id = way_id ) t ON true "
+          "FROM way_tags WHERE w.way_id = way_id AND w.version = version) t ON true "
         "LEFT JOIN LATERAL "
           "(SELECT array_agg(node_id) AS node_ids from "
             "(SELECT * FROM way_nodes "
               "WHERE w.way_id = way_id AND w.version = version "
               "ORDER BY sequence_id) x "
-          ") wn ON true ");
+          ") wn ON true "
+     "ORDER BY w.way_id, w.version");
   m_connection.prepare("extract_historic_way_tags",
     "SELECT k, v FROM way_tags WHERE way_id=$1 AND version=$2");
 
@@ -747,7 +758,8 @@ writeable_pgsql_selection::factory::factory(const po::variables_map &opts)
             "(SELECT * FROM relation_members "
               "WHERE r.relation_id = relation_id AND r.version = version "
             "ORDER BY sequence_id) x"
-          ") rm ON true");
+          ") rm ON true "
+      "ORDER BY r.relation_id, r.version");
   m_connection.prepare("extract_historic_relation_tags",
     "SELECT k, v FROM relation_tags WHERE relation_id=$1 AND version=$2");
   m_connection.prepare("extract_historic_relation_members",
@@ -820,9 +832,16 @@ writeable_pgsql_selection::factory::factory(const po::variables_map &opts)
             AND (needs_view or ends_at > (now() at time zone 'utc')) LIMIT 1 )");
 
   m_connection.prepare("get_user_id_pass",
-    R"(SELECT id, pass_crypt, pass_salt FROM users 
-           WHERE display_name = $1 
-             AND (status = 'active' or status = 'confirmed') )");
+    R"(SELECT id, pass_crypt, pass_salt FROM users
+           WHERE (email = $1 OR display_name = $2)
+             AND (status = 'active' or status = 'confirmed') LIMIT 1
+      )");
+
+  m_connection.prepare("get_user_id_pass_case_insensitive",
+    R"(SELECT id, pass_crypt, pass_salt FROM users
+           WHERE (LOWER(email) = LOWER($1) OR LOWER(display_name) = LOWER($2))
+             AND (status = 'active' or status = 'confirmed')
+      )");
 
   // clang-format on
 }
