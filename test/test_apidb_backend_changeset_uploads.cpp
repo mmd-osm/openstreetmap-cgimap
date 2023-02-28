@@ -8,7 +8,6 @@
 
 #include "cgimap/config.hpp"
 #include "cgimap/time.hpp"
-#include "cgimap/oauth.hpp"
 #include "cgimap/options.hpp"
 #include "cgimap/rate_limiter.hpp"
 #include "cgimap/routes.hpp"
@@ -2157,7 +2156,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 401)
 	  throw std::runtime_error("Expected HTTP 401 Unauthorized: wrong user/password");
@@ -2178,7 +2177,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 200)
 	  throw std::runtime_error("Expected HTTP 200 OK: Log on with display name, different case");
@@ -2199,7 +2198,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 200)
 	  throw std::runtime_error("Expected HTTP 200 OK: Log on with email address");
@@ -2220,7 +2219,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 200)
 	  throw std::runtime_error("Expected HTTP 200 OK: Log on with email address, whitespace, different case");
@@ -2243,7 +2242,7 @@ namespace {
              </osmChange>)" );
 
         // execute the request
-        process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+        process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
         // Basic Auth in status "pending" should return status HTTP 401
         if (req.response_status() != 401)
@@ -2269,7 +2268,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 403)
 	  throw std::runtime_error("Expected HTTP 403 Forbidden: user blocked (needs view)");
@@ -2297,7 +2296,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 
 	if (req.response_status() != 403)
@@ -2324,7 +2323,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 409)
 	  throw std::runtime_error("Expected HTTP 409 Conflict: Payload and URL changeset id differ");
@@ -2345,7 +2344,7 @@ namespace {
              </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 409)
 	  throw std::runtime_error("Expected HTTP 409 Conflict: User doesn't own the changeset");
@@ -2366,7 +2365,7 @@ namespace {
 		  </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 409)
 	  std::runtime_error("Expected HTTP 409 Conflict: Cannot add more elements to changeset");
@@ -2387,7 +2386,7 @@ namespace {
 		  </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 409)
 	  std::runtime_error("Expected HTTP 409 Conflict: Changeset already closed");
@@ -2448,7 +2447,7 @@ namespace {
 		 </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	// std::cout << "Response was:\n----------------------\n" << req.buffer().str() << "\n";
 
@@ -2504,7 +2503,7 @@ namespace {
 		 </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	// std::cout << "Response was:\n----------------------\n" << req.buffer().str() << "\n";
 
@@ -2540,7 +2539,7 @@ namespace {
                    </osmChange>)" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	// std::cout << "Response was:\n----------------------\n" << req.buffer().str() << "\n";
 

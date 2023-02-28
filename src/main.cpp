@@ -110,7 +110,6 @@ static void get_options(int argc, char **argv, po::variables_map &options) {
     ("max-relation-members", po::value<int>(), "max number of relation members per relation")
     ("max-element-tags", po::value<int>(), "max number of tags per OSM element")
     ("basic_auth_support", po::value<bool>(), "enable HTTP basic authentication support")
-    ("oauth_10_support", po::value<bool>(), "enable legacy OAuth 1.0 support")
     ("gdpr", po::value<bool>(), "enable GDPR mode, omits user data for non-compliant requests")
     ;
   // clang-format on
@@ -187,7 +186,6 @@ static void process_requests(int socket, const po::variables_map &options) {
   // getting at data.
   auto factory = create_backend(options);
   auto update_factory = create_update_backend(options);
-  auto oauth_store = create_oauth_store(options);
 
   logger::message("Initialised");
 
@@ -206,7 +204,7 @@ static void process_requests(int socket, const po::variables_map &options) {
     if (req.accept_r() >= 0) {
       std::chrono::system_clock::time_point now(std::chrono::system_clock::now());
       req.set_current_time(now);
-      process_request(req, limiter, generator, route, *factory, update_factory.get(), oauth_store.get());
+      process_request(req, limiter, generator, route, *factory, update_factory.get());
     }
   }
 

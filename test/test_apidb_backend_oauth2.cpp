@@ -8,7 +8,6 @@
 
 #include "cgimap/config.hpp"
 #include "cgimap/time.hpp"
-#include "cgimap/oauth.hpp"
 #include "cgimap/rate_limiter.hpp"
 #include "cgimap/routes.hpp"
 #include "cgimap/process_request.hpp"
@@ -85,8 +84,6 @@ void test_user_id_for_oauth2_token(test_database &tdb) {
 
 
   )");
-
-  auto store = tdb.get_oauth_store();
 
   // Note: Tokens in this unit tests are considered to be opaque strings, tokens are used for db lookups as-is.
   // It doesn't matter if they have been previously stored as plain or sha256-hashed tokens.
@@ -259,7 +256,7 @@ private:
 };
 
 
-void create_changeset(test_database &tdb, oauth::store& store, std::string token, int expected_response_code) {
+void create_changeset(test_database &tdb, std::string token, int expected_response_code) {
 
   // Test valid token, create empty changeset
   recording_rate_limiter limiter;
@@ -297,12 +294,12 @@ void create_changeset(test_database &tdb, oauth::store& store, std::string token
 
   req.set_payload(R"( <osm><changeset><tag k="created_by" v="JOSM 1.61"/><tag k="comment" v="Just adding some streetnames"/></changeset></osm> )" );
 
-  process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), &store);
+  process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
   assert_equal<int>(expected_response_code, req.response_status(), "response status");
 }
 
-void fetch_relation(test_database &tdb, oauth::store& store, std::string token, int expected_response_code) {
+void fetch_relation(test_database &tdb, std::string token, int expected_response_code) {
 
   recording_rate_limiter limiter;
   std::string generator("test_apidb_backend.cpp");
@@ -339,7 +336,7 @@ void fetch_relation(test_database &tdb, oauth::store& store, std::string token, 
   req.set_header("REQUEST_URI", "/api/0.6/relation/165475/full");
   req.set_header("SCRIPT_NAME", "/api/0.6/relation/165475/full");
 
-  process_request(req, limiter, generator, route, *factory, nullptr, &store);
+  process_request(req, limiter, generator, route, *factory, nullptr);
 
   assert_equal<int>(expected_response_code, req.response_status(), "response status");
 }
@@ -373,25 +370,23 @@ void test_oauth2_end_to_end(test_database &tdb) {
        VALUES (78, 1000, 3, '2KxONxvhoSji9F8dz_WO6UZOzRdmQ0ISB0ovnZrJnhM', NULL, NULL, NULL, '2021-04-14 19:38:21.991429', 'write_api', '');
   )");
 
-  auto store = tdb.get_oauth_store();
-
   // Test valid token -> HTTP 404 not found, due to unknown relation
-  fetch_relation(tdb, *store, "1yi2RI2WhIVMLoLaDLg0nrPJPU4WQSIX4Hh_jxfRRxI", 404);
+  fetch_relation(tdb, "1yi2RI2WhIVMLoLaDLg0nrPJPU4WQSIX4Hh_jxfRRxI", 404);
 
   // Test unknown token -> HTTP 401 Unauthorized
-  fetch_relation(tdb, *store, "8JrrmoKSUtzBhmenUUQF27PVdQn2QY8YdRfosu3R-Dc", 401);
+  fetch_relation(tdb, "8JrrmoKSUtzBhmenUUQF27PVdQn2QY8YdRfosu3R-Dc", 401);
 
   // Test valid token, create empty changeset
 
   // missing write_api scope --> http::unauthorized ("You have not granted the modify map permission")
-  create_changeset(tdb, *store, "hCXrz5B5fCBHusp0EuD2IGwYSxS8bkAnVw2_aLEdxig", 401);
+  create_changeset(tdb, "hCXrz5B5fCBHusp0EuD2IGwYSxS8bkAnVw2_aLEdxig", 401);
 
   // includes write_api scope
-  create_changeset(tdb, *store, "1yi2RI2WhIVMLoLaDLg0nrPJPU4WQSIX4Hh_jxfRRxI", 200);
+  create_changeset(tdb, "1yi2RI2WhIVMLoLaDLg0nrPJPU4WQSIX4Hh_jxfRRxI", 200);
 
   // Same as previous tests case. However, user 1000 is not active this time
   // Creating changesets should be rejected with HTTP 403 (Forbidden)
-  create_changeset(tdb, *store, "2KxONxvhoSji9F8dz_WO6UZOzRdmQ0ISB0ovnZrJnhM", 403);
+  create_changeset(tdb, "2KxONxvhoSji9F8dz_WO6UZOzRdmQ0ISB0ovnZrJnhM", 403);
 }
 
 } // anonymous namespace

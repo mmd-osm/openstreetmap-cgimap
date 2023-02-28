@@ -24,7 +24,6 @@ public:
   virtual std::optional<uint32_t> get_relation_max_members() const = 0;
   virtual std::optional<uint32_t> get_element_max_tags() const = 0;
   virtual bool get_basic_auth_support() const = 0;
-  virtual bool get_oauth_10_support() const = 0;
   virtual bool get_gdpr_mode() const = 0;
 };
 
@@ -72,10 +71,6 @@ public:
   }
 
   bool get_basic_auth_support() const override {
-    return true;
-  }
-
-  virtual bool get_oauth_10_support() const override {
     return true;
   }
 
@@ -146,10 +141,6 @@ public:
     return m_basic_auth_support;
   }
 
-  virtual bool get_oauth_10_support() const override {
-    return m_oauth_10_support;
-  }
-
   virtual bool get_gdpr_mode() const override {
     return m_gdpr_mode;
   }
@@ -168,7 +159,6 @@ private:
   void set_relation_max_members(const po::variables_map &options);
   void set_element_max_tags(const po::variables_map &options);
   void set_basic_auth_support(const po::variables_map &options);
-  void set_oauth_10_support(const po::variables_map &options);
   void set_gdpr_mode(const po::variables_map &options);
   bool validate_timeout(const std::string &timeout) const;
 
@@ -183,7 +173,6 @@ private:
   std::optional<uint32_t> m_relation_max_members;
   std::optional<uint32_t> m_element_max_tags;
   bool m_basic_auth_support;
-  bool m_oauth_10_support;
   bool m_gdpr_mode; // true, if GDPR mode is enabled
 };
 
@@ -226,9 +215,6 @@ public:
 
   // Enable HTTP basic authentication support
   static bool get_basic_auth_support() { return settings->get_basic_auth_support(); }
-
-  // Enable legacy OAuth 1.0 support
-  static bool get_oauth_10_support() { return settings->get_oauth_10_support(); }
 
   // Is GDPR mode active, i.e. additional data privacy filtering rules are in effect
   static bool get_gdpr_mode() { return settings->get_gdpr_mode(); }

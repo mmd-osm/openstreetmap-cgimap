@@ -9,7 +9,6 @@
 
 #include "cgimap/config.hpp"
 #include "cgimap/time.hpp"
-#include "cgimap/oauth.hpp"
 #include "cgimap/rate_limiter.hpp"
 #include "cgimap/routes.hpp"
 #include "cgimap/process_request.hpp"

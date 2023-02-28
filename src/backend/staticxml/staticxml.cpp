@@ -600,10 +600,29 @@ struct static_data_selection : public data_selection {
     m_include_changeset_comments = true;
   }
 
-  bool supports_user_details() const override { return false; }
-  bool is_user_blocked(const osm_user_id_t) override { return true; }
-  bool get_user_id_pass(const std::string&, osm_user_id_t &, std::string &, std::string &) override { return false; };
-  bool is_user_active(const osm_user_id_t) override { return true; }
+  bool supports_user_details() const override {
+    return false;
+  }
+
+  bool is_user_blocked(const osm_user_id_t) override {
+    return true;
+  }
+
+  bool get_user_id_pass(const std::string&, osm_user_id_t &, std::string &, std::string &) override {
+    return false;
+  };
+
+  bool is_user_active(const osm_user_id_t) override {
+    return true;
+  }
+
+  std::set<osm_user_role_t> get_roles_for_user(osm_user_id_t) override {
+    return {};
+  }
+
+  std::optional<osm_user_id_t> get_user_id_for_oauth2_token(const std::string &token_id, bool& expired, bool& revoked, bool& allow_api_write) override  {
+    return {};
+  }
 
 private:
   template <typename T>
@@ -812,12 +831,6 @@ struct staticxml_backend : public backend {
 
   std::unique_ptr<data_update::factory> create_data_update(const po::variables_map &) {
     return nullptr;   // Data update operations not supported by staticxml backend
-  }
-
-
-  std::unique_ptr<oauth::store> create_oauth_store(
-    const po::variables_map &) {
-    return std::unique_ptr<oauth::store>();
   }
 
 private:

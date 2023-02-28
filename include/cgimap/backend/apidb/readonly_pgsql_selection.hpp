@@ -9,6 +9,7 @@
 #include <boost/program_options.hpp>
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <set>
 
 /**
@@ -67,6 +68,9 @@ public:
   bool is_user_blocked(const osm_user_id_t) override;
   bool get_user_id_pass(const std::string&, osm_user_id_t &, std::string &, std::string &) override;
   bool is_user_active(const osm_user_id_t id) override;
+
+  std::set<osm_user_role_t> get_roles_for_user(osm_user_id_t) override;
+  std::optional<osm_user_id_t> get_user_id_for_oauth2_token(const std::string &token_id, bool& expired, bool& revoked, bool& allow_api_write) override;
 
 
   /**

@@ -8,7 +8,6 @@
 
 #include "cgimap/config.hpp"
 #include "cgimap/time.hpp"
-#include "cgimap/oauth.hpp"
 #include "cgimap/rate_limiter.hpp"
 #include "cgimap/routes.hpp"
 #include "cgimap/process_request.hpp"
@@ -381,7 +380,7 @@ void test_changeset_create(test_database &tdb) {
                           )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 401)
 	  throw std::runtime_error("Expected HTTP 401 Unauthorized: wrong user/password");
@@ -406,7 +405,7 @@ void test_changeset_create(test_database &tdb) {
                           )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 401)
 	  throw std::runtime_error("Expected HTTP 401 Unauthorized: wrong user/password");
@@ -433,7 +432,7 @@ void test_changeset_create(test_database &tdb) {
                           )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 403)
 	  throw std::runtime_error("Expected HTTP 403 Forbidden: user blocked (needs view)");
@@ -465,7 +464,7 @@ void test_changeset_create(test_database &tdb) {
                           )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 
 	if (req.response_status() != 403)
@@ -498,7 +497,7 @@ void test_changeset_create(test_database &tdb) {
 			    </osm>  )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 200, "should have received HTTP status 200 OK");
 	assert_equal<std::string>(req.body().str(), "500", "should have received changeset id 500");
@@ -575,7 +574,7 @@ void test_changeset_update(test_database &tdb) {
 			    </osm>  )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 401, "should have received HTTP status 401 Unauthenticated");
 
@@ -601,7 +600,7 @@ void test_changeset_update(test_database &tdb) {
                           )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	if (req.response_status() != 401)
 	  throw std::runtime_error("Expected HTTP 401 Unauthorized: wrong user/password");
@@ -627,7 +626,7 @@ void test_changeset_update(test_database &tdb) {
 			    </osm>  )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 409, "should have received HTTP status 409 Conflict");
     }
@@ -651,7 +650,7 @@ void test_changeset_update(test_database &tdb) {
 			    </osm>  )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 404, "should have received HTTP status 404 Not found");
     }
@@ -674,7 +673,7 @@ void test_changeset_update(test_database &tdb) {
 			    </osm>  )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 409, "should have received HTTP status 409 Conflict");
     }
@@ -698,7 +697,7 @@ void test_changeset_update(test_database &tdb) {
 			    </osm>  )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 200, "should have received HTTP status 200 OK");
 
@@ -728,7 +727,7 @@ void test_changeset_update(test_database &tdb) {
 			    </osm>  )" );
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 200, "should have received HTTP status 200 OK");
 
@@ -796,7 +795,7 @@ void test_changeset_close(test_database &tdb) {
 	req.set_header("REMOTE_ADDR", "127.0.0.1");
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 401, "should have received HTTP status 401 Unauthorized");
     }
@@ -811,7 +810,7 @@ void test_changeset_close(test_database &tdb) {
 	req.set_header("REMOTE_ADDR", "127.0.0.1");
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 200, "should have received HTTP status 200 OK");
 
@@ -827,7 +826,7 @@ void test_changeset_close(test_database &tdb) {
 	req.set_header("REMOTE_ADDR", "127.0.0.1");
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 409, "should have received HTTP status 409 Conflict");
     }
@@ -842,7 +841,7 @@ void test_changeset_close(test_database &tdb) {
 	req.set_header("REMOTE_ADDR", "127.0.0.1");
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 404, "should have received HTTP status 404 Not found");
     }
@@ -857,7 +856,7 @@ void test_changeset_close(test_database &tdb) {
 	req.set_header("REMOTE_ADDR", "127.0.0.1");
 
 	// execute the request
-	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get(), nullptr);
+	process_request(req, limiter, generator, route, *sel_factory, upd_factory.get());
 
 	assert_equal<int>(req.response_status(), 409, "should have received HTTP status 409 Conflict");
     }
