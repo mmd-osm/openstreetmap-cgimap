@@ -50,7 +50,7 @@ changeset_handler::changeset_handler(request &req, osm_changeset_id_t id_)
 }
 
 
-std::string changeset_handler::log_name() const { return "changeset"; }
+std::string changeset_handler::log_name() const { return (fmt::format("changeset {:d}", id)); }
 
 responder_ptr_t changeset_handler::responder(data_selection &w) const {
   return responder_ptr_t(new changeset_responder(mime_type, id, include_discussion, w));

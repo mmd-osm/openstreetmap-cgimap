@@ -21,7 +21,7 @@ changeset_download_handler::changeset_download_handler(request &req, osm_changes
   : id(id_) {
 }
 
-std::string changeset_download_handler::log_name() const { return "changeset/download"; }
+std::string changeset_download_handler::log_name() const { return (fmt::format("changeset/download {:d}", id)); }
 
 responder_ptr_t changeset_download_handler::responder(data_selection &w) const {
   return responder_ptr_t(new changeset_download_responder(mime_type, id, w));

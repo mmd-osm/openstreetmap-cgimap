@@ -16,7 +16,7 @@ node_responder::node_responder(mime::type mt, osm_nwr_id_t id_, data_selection &
 
 node_handler::node_handler(request &, osm_nwr_id_t id_) : id(id_) {}
 
-std::string node_handler::log_name() const { return "node"; }
+std::string node_handler::log_name() const { return (fmt::format("node {:d}", id)); }
 
 responder_ptr_t node_handler::responder(data_selection &w) const {
   return responder_ptr_t(new node_responder(mime_type, id, w));
