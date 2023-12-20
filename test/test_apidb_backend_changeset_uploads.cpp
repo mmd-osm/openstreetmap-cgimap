@@ -22,7 +22,6 @@
 
 #include "cgimap/config.hpp"
 #include "cgimap/time.hpp"
-#include "cgimap/oauth.hpp"
 #include "cgimap/options.hpp"
 #include "cgimap/rate_limiter.hpp"
 #include "cgimap/routes.hpp"
