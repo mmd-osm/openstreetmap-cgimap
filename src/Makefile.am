@@ -20,7 +20,7 @@ if ENABLE_APIDB
 lib_LTLIBRARIES+=libcgimap_apidb.la
 check_PROGRAMS+=\
 	../test/test_apidb_backend_nodes \
-	../test/test_apidb_backend_oauth \
+	../test/test_apidb_backend_roles \
 	../test/test_apidb_backend_oauth2 \
 	../test/test_apidb_backend_historic \
 	../test/test_apidb_backend_changesets \
@@ -29,7 +29,7 @@ check_PROGRAMS+=\
 ___openstreetmap_cgimap_LDADD+=libcgimap_apidb.la
 ___test_test_core_LDADD+=libcgimap_apidb.la
 ___test_test_apidb_backend_nodes_LDADD=libcgimap_core.la libcgimap_apidb.la
-___test_test_apidb_backend_oauth_LDADD=libcgimap_core.la libcgimap_apidb.la
+___test_test_apidb_backend_roles_LDADD=libcgimap_core.la libcgimap_apidb.la
 ___test_test_apidb_backend_oauth2_LDADD=libcgimap_core.la libcgimap_apidb.la
 ___test_test_apidb_backend_historic_LDADD=libcgimap_core.la libcgimap_apidb.la
 ___test_test_apidb_backend_changesets_LDADD=libcgimap_core.la libcgimap_apidb.la
@@ -42,7 +42,7 @@ ___openstreetmap_cgimap_LDADD+=libcgimap_staticxml.la
 ___test_test_core_LDADD+=libcgimap_staticxml.la
 if ENABLE_APIDB
 ___test_test_apidb_backend_nodes_LDADD+=libcgimap_staticxml.la
-___test_test_apidb_backend_oauth_LDADD+=libcgimap_staticxml.la
+___test_test_apidb_backend_roles_LDADD+=libcgimap_staticxml.la
 ___test_test_apidb_backend_oauth2_LDADD+=libcgimap_staticxml.la
 ___test_test_apidb_backend_historic_LDADD+=libcgimap_staticxml.la
 ___test_test_apidb_backend_changesets_LDADD+=libcgimap_staticxml.la
@@ -71,7 +71,7 @@ ___test_test_parse_options_LDADD=libcgimap_core.la @LIBXML_LIBS@ @BOOST_PROGRAM_
 
 if ENABLE_APIDB
 ___test_test_apidb_backend_nodes_LDADD+=libcgimap_core.la @BOOST_PROGRAM_OPTIONS_LIB@ @LIBPQXX_LIBS@ @CRYPTOPP_LIBS@ @ARGON2_LIBS@
-___test_test_apidb_backend_oauth_LDADD+=libcgimap_core.la @BOOST_PROGRAM_OPTIONS_LIB@ @LIBPQXX_LIBS@ @CRYPTOPP_LIBS@ @ARGON2_LIBS@
+___test_test_apidb_backend_roles_LDADD+=libcgimap_core.la @BOOST_PROGRAM_OPTIONS_LIB@ @LIBPQXX_LIBS@ @CRYPTOPP_LIBS@ @ARGON2_LIBS@
 ___test_test_apidb_backend_oauth2_LDADD+=libcgimap_core.la @BOOST_PROGRAM_OPTIONS_LIB@ @LIBPQXX_LIBS@ @CRYPTOPP_LIBS@ @ARGON2_LIBS@
 ___test_test_apidb_backend_historic_LDADD+=libcgimap_core.la @BOOST_PROGRAM_OPTIONS_LIB@ @LIBPQXX_LIBS@ @CRYPTOPP_LIBS@ @ARGON2_LIBS@
 ___test_test_apidb_backend_changesets_LDADD+=libcgimap_core.la @BOOST_PROGRAM_OPTIONS_LIB@ @LIBPQXX_LIBS@ @CRYPTOPP_LIBS@ @ARGON2_LIBS@
@@ -129,8 +129,9 @@ ___test_test_apidb_backend_nodes_SOURCES=\
 	../test/test_formatter.cpp \
 	../test/test_database.cpp \
 	../test/test_request.cpp
-___test_test_apidb_backend_oauth_SOURCES=\
-	../test/test_apidb_backend_oauth.cpp \
+___test_test_apidb_backend_roles_CPPFLAGS=$(AM_CPPFLAGS) $(CATCH2_CPPFLAGS)
+___test_test_apidb_backend_roles_SOURCES=\
+	../test/test_apidb_backend_roles.cpp \
 	../test/test_formatter.cpp \
 	../test/test_database.cpp \
 	../test/test_request.cpp

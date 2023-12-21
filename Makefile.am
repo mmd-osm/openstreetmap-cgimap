@@ -123,7 +123,7 @@ endif
 if ENABLE_APIDB
 TESTS += \
 	test/test_apidb_backend_nodes \
-	test/test_apidb_backend_oauth \
+	test/test_apidb_backend_roles \
 	test/test_apidb_backend_oauth2 \
 	test/test_apidb_backend_historic \
 	test/test_apidb_backend_changesets \
