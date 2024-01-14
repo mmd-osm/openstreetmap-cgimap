@@ -12,6 +12,7 @@
 
 #include "cgimap/api06/changeset_upload/osmobject.hpp"
 
+#include <charconv>
 #include <iostream>
 #include <optional>
 #include <cmath>
@@ -33,12 +34,16 @@ public:
 
     double _lat = -200.0;
 
-    try {
-      _lat = std::stod(lat);
-    } catch (std::invalid_argument &e) {
+    auto [ptr, ec] = std::from_chars(lat.data(), lat.data() + lat.size(), _lat);
+
+    if (ec == std::errc::invalid_argument) {
       throw xml_error("Latitude is not numeric");
-    } catch (std::out_of_range &e) {
+    }
+    else if (ec == std::errc::result_out_of_range) {
       throw xml_error("Latitude value is too large");
+    }
+    else if (ec != std::errc()) {
+      throw xml_error("Cannot parse latitude");
     }
 
     set_lat(_lat);
@@ -48,12 +53,16 @@ public:
 
     double _lon = -200.0;
 
-    try {
-      _lon = std::stod(lon);
-    } catch (std::invalid_argument &e) {
+    auto [ptr, ec] = std::from_chars(lon.data(), lon.data() + lon.size(), _lon);
+
+    if (ec == std::errc::invalid_argument) {
       throw xml_error("Longitude is not numeric");
-    } catch (std::out_of_range &e) {
+    }
+    else if (ec == std::errc::result_out_of_range) {
       throw xml_error("Longitude value is too large");
+    }
+    else if (ec != std::errc()) {
+      throw xml_error("Cannot parse longitude");
     }
 
     set_lon(_lon);

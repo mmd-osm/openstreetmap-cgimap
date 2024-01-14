@@ -13,6 +13,7 @@
 #include "osmobject.hpp"
 #include "cgimap/options.hpp"
 
+#include <charconv>
 #include <string>
 #include <vector>
 
@@ -35,12 +36,16 @@ public:
 
     osm_nwr_signed_id_t _waynode = 0;
 
-    try {
-      _waynode = std::stol(waynode);
-    } catch (std::invalid_argument& e) {
+    auto [ptr, ec] = std::from_chars(waynode.data(), waynode.data() + waynode.size(), _waynode);
+
+    if (ec == std::errc::invalid_argument) {
       throw xml_error("Way node is not numeric");
-    } catch (std::out_of_range& e) {
+    }
+    else if (ec == std::errc::result_out_of_range) {
       throw xml_error("Way node value is too large");
+    }
+    else if (ec != std::errc()){
+      throw xml_error("Cannot parse way node");
     }
 
     if (_waynode == 0) {

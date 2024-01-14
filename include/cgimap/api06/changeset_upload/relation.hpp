@@ -14,6 +14,7 @@
 #include "cgimap/types.hpp"
 #include "cgimap/util.hpp"
 
+#include <charconv>
 #include <optional>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -57,13 +58,16 @@ public:
 
     osm_nwr_signed_id_t _ref = 0;
 
-    try {
-      _ref = std::stol(ref);
-    } catch (std::invalid_argument &e) {
+    auto [ptr, ec] = std::from_chars(ref.data(), ref.data() + ref.size(), _ref);
+
+    if (ec == std::errc::invalid_argument) {
       throw xml_error("Relation member 'ref' attribute is not numeric");
-    } catch (std::out_of_range &e) {
-      throw xml_error(
-          "Relation member 'ref' attribute value is too large");
+    }
+    else if (ec == std::errc::result_out_of_range) {
+      throw xml_error("Relation member 'ref' attribute value is too large");
+    }
+    else if (ec != std::errc()) {
+      throw xml_error("Cannot parse relation member ref attribute");
     }
 
     if (_ref == 0) {

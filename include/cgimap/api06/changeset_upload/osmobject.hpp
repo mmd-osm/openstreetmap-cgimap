@@ -13,9 +13,11 @@
 #include "cgimap/types.hpp"
 #include "cgimap/util.hpp"
 
-#include <fmt/core.h>
+#include <charconv>
 #include <map>
 #include <optional>
+
+#include <fmt/core.h>
 
 namespace api06 {
 
@@ -47,12 +49,16 @@ namespace api06 {
 
       osm_changeset_id_t _changeset = 0;
 
-      try {
-	  _changeset = std::stol(changeset);
-      } catch (std::invalid_argument& e) {
-	  throw xml_error("Changeset is not numeric");
-      } catch (std::out_of_range& e) {
-	  throw xml_error("Changeset number is too large");
+      auto [ptr, ec] = std::from_chars(changeset.data(), changeset.data() + changeset.size(), _changeset);
+
+      if (ec == std::errc::invalid_argument) {
+        throw xml_error("Changeset is not numeric");
+      }
+      else if (ec == std::errc::result_out_of_range) {
+        throw xml_error("Changeset number is too large");
+      }
+      else if (ec != std::errc()) {
+        throw xml_error("Cannot parse changeset");
       }
 
       if (_changeset <= 0) {
@@ -66,12 +72,16 @@ namespace api06 {
 
       int64_t _version = 0;
 
-      try {
-	  _version = std::stoi(version);
-      } catch (std::invalid_argument& e) {
-	  throw xml_error("Version is not numeric");
-      } catch (std::out_of_range& e) {
-	  throw xml_error("Version value is too large");
+      auto [ptr, ec] = std::from_chars(version.data(), version.data() + version.size(), _version);
+
+      if (ec == std::errc::invalid_argument) {
+        throw xml_error("Version is not numeric");
+      }
+      else if (ec == std::errc::result_out_of_range) {
+        throw xml_error("Version value is too large");
+      }
+      else if (ec != std::errc()) {
+        throw xml_error("Cannot parse version");
       }
 
       if (_version < 0) {
@@ -85,12 +95,16 @@ namespace api06 {
 
       osm_nwr_signed_id_t _id = 0;
 
-      try {
-	  _id = std::stol(id);
-      } catch (std::invalid_argument& e) {
-	  throw xml_error("Id is not numeric");
-      } catch (std::out_of_range& e) {
-	  throw xml_error("Id number is too large");
+      auto [ptr, ec] = std::from_chars(id.data(), id.data() + id.size(), _id);
+
+      if (ec == std::errc::invalid_argument) {
+        throw xml_error("Id is not numeric");
+      }
+      else if (ec == std::errc::result_out_of_range) {
+        throw xml_error("Id number is too large");
+      }
+      else if (ec != std::errc()) {
+        throw xml_error("Cannot parse id");
       }
 
       if (_id == 0) {
