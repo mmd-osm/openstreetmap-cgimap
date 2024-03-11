@@ -28,15 +28,12 @@ RUN mkdir build && cd build && \
 
 FROM debian:trixie-slim
 
+COPY --from=builder /app/build/*.deb /app_deb/
+
 RUN apt-get update -qq && \
-    apt-get install -y \
-       libfcgi-bin libmemcached11 libboost-program-options1.83.0 \
-       libxml2 libcrypto++8 libyajl2 libpqxx-7.9 zlib1g libbrotli1 libfmt9 \
-       --no-install-recommends && \
+    apt install --no-install-recommends -y /app_deb/*.deb && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /app/openstreetmap-cgimap /usr/local/bin
 
 RUN groupadd -g 61000 cgimap && \
     useradd -g 61000 -l -M -s /bin/false -u 61000 cgimap
