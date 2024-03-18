@@ -1,3 +1,4 @@
+
 ########
 # catch2
 ########
@@ -10,6 +11,22 @@ target_include_directories(catch2 INTERFACE
 # unit tests
 ############
 if(BUILD_TESTING)
+
+    ##################
+    # cgimap_staticxml
+    ##################
+    add_library(cgimap_staticxml)
+
+    target_include_directories(cgimap_staticxml PUBLIC
+        .)
+
+    target_sources(cgimap_staticxml PRIVATE
+        staticxml.cpp)
+
+    target_link_libraries(cgimap_staticxml
+        cgimap_common_compiler_options
+        LibXml2::LibXml2
+        cgimap_core)
 
     ###########
     # test_core
@@ -135,131 +152,130 @@ if(BUILD_TESTING)
         COMMAND test_parse_changeset_input)
 
 
-    if(ENABLE_APIDB)
-        ##########################
-        # test_apidb_backend_nodes
-        ##########################
-        add_executable(test_apidb_backend_nodes
-            test_apidb_backend_nodes.cpp
-            test_formatter.cpp
-            test_database.cpp
-            test_request.cpp)
+    ##########################
+    # test_apidb_backend_nodes
+    ##########################
+    add_executable(test_apidb_backend_nodes
+        test_apidb_backend_nodes.cpp
+        test_formatter.cpp
+        test_database.cpp
+        test_request.cpp)
 
-        target_link_libraries(test_apidb_backend_nodes
-            cgimap_common_compiler_options
-            cgimap_core
-            cgimap_apidb
-            Boost::program_options
-            catch2)
+    target_link_libraries(test_apidb_backend_nodes
+        cgimap_common_compiler_options
+        cgimap_core
+        cgimap_apidb
+        Boost::program_options
+        catch2)
 
-        add_test(NAME test_apidb_backend_nodes
-            COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_nodes>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
-
-
-        ###########################
-        # test_apidb_backend_oauth2
-        ###########################
-        add_executable(test_apidb_backend_oauth2
-            test_apidb_backend_oauth2.cpp
-            test_formatter.cpp
-            test_database.cpp
-            test_request.cpp)
-
-        target_link_libraries(test_apidb_backend_oauth2
-            cgimap_common_compiler_options
-            cgimap_core
-            cgimap_apidb
-            cgimap_staticxml
-            Boost::program_options
-            catch2)
-
-        add_test(NAME test_apidb_backend_oauth2
-            COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_oauth2>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
+    add_test(NAME test_apidb_backend_nodes
+        COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_nodes>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
 
 
-        #############################
-        # test_apidb_backend_historic
-        #############################
-        add_executable(test_apidb_backend_historic
-            test_apidb_backend_historic.cpp
-            test_formatter.cpp
-            test_database.cpp
-            test_request.cpp)
+    ###########################
+    # test_apidb_backend_oauth2
+    ###########################
+    add_executable(test_apidb_backend_oauth2
+        test_apidb_backend_oauth2.cpp
+        test_formatter.cpp
+        test_database.cpp
+        test_request.cpp)
 
-        target_link_libraries(test_apidb_backend_historic
-            cgimap_common_compiler_options
-            cgimap_core
-            cgimap_apidb
-            cgimap_staticxml
-            Boost::program_options
-            catch2)
+    target_link_libraries(test_apidb_backend_oauth2
+        cgimap_common_compiler_options
+        cgimap_core
+        cgimap_apidb
+        cgimap_staticxml
+        Boost::program_options
+        catch2)
 
-        add_test(NAME test_apidb_backend_historic
-            COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_historic>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
-
-
-        ###############################
-        # test_apidb_backend_changesets
-        ###############################
-        add_executable(test_apidb_backend_changesets
-            test_apidb_backend_changesets.cpp
-            test_formatter.cpp
-            test_database.cpp
-            test_request.cpp)
-
-        target_link_libraries(test_apidb_backend_changesets
-            cgimap_common_compiler_options
-            cgimap_core
-            cgimap_apidb
-            cgimap_staticxml
-            Boost::program_options
-            catch2)
-
-        add_test(NAME test_apidb_backend_changesets
-            COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_changesets>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
+    add_test(NAME test_apidb_backend_oauth2
+        COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_oauth2>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
 
 
-        ########################################
-        # test_apidb_backend_changeset_downloads
-        ########################################
-        add_executable(test_apidb_backend_changeset_downloads
-            test_apidb_backend_changeset_downloads.cpp
-            test_formatter.cpp
-            test_database.cpp
-            test_request.cpp)
+    #############################
+    # test_apidb_backend_historic
+    #############################
+    add_executable(test_apidb_backend_historic
+        test_apidb_backend_historic.cpp
+        test_formatter.cpp
+        test_database.cpp
+        test_request.cpp)
 
-        target_link_libraries(test_apidb_backend_changeset_downloads
-            cgimap_common_compiler_options
-            cgimap_core
-            cgimap_apidb
-            cgimap_staticxml
-            Boost::program_options
-            catch2)
+    target_link_libraries(test_apidb_backend_historic
+        cgimap_common_compiler_options
+        cgimap_core
+        cgimap_apidb
+        cgimap_staticxml
+        Boost::program_options
+        catch2)
 
-        add_test(NAME test_apidb_backend_changeset_downloads
-            COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_changeset_downloads>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
+    add_test(NAME test_apidb_backend_historic
+        COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_historic>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
 
 
-        ######################################
-        # test_apidb_backend_changeset_uploads
-        ######################################
-        add_executable(test_apidb_backend_changeset_uploads
-            test_apidb_backend_changeset_uploads.cpp
-            test_formatter.cpp
-            test_database.cpp
-            test_request.cpp)
+    ###############################
+    # test_apidb_backend_changesets
+    ###############################
+    add_executable(test_apidb_backend_changesets
+        test_apidb_backend_changesets.cpp
+        test_formatter.cpp
+        test_database.cpp
+        test_request.cpp)
 
-        target_link_libraries(test_apidb_backend_changeset_uploads
-            cgimap_common_compiler_options
-            cgimap_core
-            cgimap_apidb
-            Boost::program_options
-            Threads::Threads
-            catch2)
+    target_link_libraries(test_apidb_backend_changesets
+        cgimap_common_compiler_options
+        cgimap_core
+        cgimap_apidb
+        cgimap_staticxml
+        Boost::program_options
+        catch2)
 
-        add_test(NAME test_apidb_backend_changeset_uploads
-            COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_changeset_uploads>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
-    endif()
+    add_test(NAME test_apidb_backend_changesets
+        COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_changesets>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
+
+
+    ########################################
+    # test_apidb_backend_changeset_downloads
+    ########################################
+    add_executable(test_apidb_backend_changeset_downloads
+        test_apidb_backend_changeset_downloads.cpp
+        test_formatter.cpp
+        test_database.cpp
+        test_request.cpp)
+
+    target_link_libraries(test_apidb_backend_changeset_downloads
+        cgimap_common_compiler_options
+        cgimap_core
+        cgimap_apidb
+        cgimap_staticxml
+        Boost::program_options
+        catch2)
+
+    add_test(NAME test_apidb_backend_changeset_downloads
+        COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_changeset_downloads>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
+
+
+    ######################################
+    # test_apidb_backend_changeset_uploads
+    ######################################
+    add_executable(test_apidb_backend_changeset_uploads
+        test_apidb_backend_changeset_uploads.cpp
+        test_formatter.cpp
+        test_database.cpp
+        test_request.cpp)
+
+    target_link_libraries(test_apidb_backend_changeset_uploads
+        cgimap_common_compiler_options
+        cgimap_core
+        cgimap_apidb
+        Boost::program_options
+        Threads::Threads
+        catch2)
+
+    add_test(NAME test_apidb_backend_changeset_uploads
+        COMMAND pg_virtualenv "$<TARGET_FILE:test_apidb_backend_changeset_uploads>" --db-schema "${CMAKE_CURRENT_SOURCE_DIR}/structure.sql")
+
 
     # define check alias target for autotools compatibility
     add_custom_target(check DEPENDS test)

@@ -7,9 +7,7 @@
  * For a full list of authors see the git log.
  */
 
-#if ENABLE_APIDB
 #include <pqxx/pqxx>
-#endif
 #include <iostream>
 #include <sstream>
 
@@ -49,11 +47,7 @@ using namespace std::chrono_literals;
 #include "cgimap/options.hpp"
 #include "cgimap/process_request.hpp"
 
-#ifdef ENABLE_APIDB
 #include "cgimap/backend/apidb/apidb.hpp"
-#endif
-
-#include "cgimap/backend/staticxml/staticxml.hpp"
 
 namespace po = boost::program_options;
 
@@ -288,11 +282,8 @@ void daemonise() {
   close(2);
 }
 
-void setup_backends() {
-#if ENABLE_APIDB
+void setup_backend() {
   register_backend(make_apidb_backend());
-#endif
-  register_backend(make_staticxml_backend());
 }
 
 
@@ -425,8 +416,8 @@ int main(int argc, char **argv) {
   try {
     po::variables_map options;
 
-    // set up all the backends
-    setup_backends();
+    // set up the backend
+    setup_backend();
 
     // get options
     get_options(argc, argv, options);
@@ -447,7 +438,6 @@ int main(int argc, char **argv) {
     std::cerr << "Error: " << e.what() << "\n(\"openstreetmap-cgimap --help\" for help)" << std::endl;
     return 1;
 
-#if ENABLE_APIDB
   } catch (const pqxx::sql_error &er) {
     logger::message(er.what());
     // Catch-all for query related postgres exceptions
@@ -456,14 +446,11 @@ int main(int argc, char **argv) {
     return 1;
 
 #if PQXX_VERSION_MAJOR < 7
-
   } catch (const pqxx::pqxx_exception &e) {
     // Catch-all for any other postgres exceptions
     logger::message(e.base().what());
     std::cerr << "Error: " << e.base().what() << std::endl;
     return 1;
-
-#endif
 #endif
 
   } catch (const std::exception &e) {
