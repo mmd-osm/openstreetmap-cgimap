@@ -24,6 +24,9 @@ static int wrap_write(void *context, const char *buffer, int len) {
     throw xml_writer::write_error("Output buffer was NULL in wrap_write().");
   }
 
+  if (len == 0)
+    return 0;
+
   return out->write(buffer, len);
 }
 

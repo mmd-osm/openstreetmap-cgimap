@@ -15,6 +15,10 @@
 #include <unistd.h>
 #include <memory>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/chrono.h>
+
 #include "cgimap/logger.hpp"
 
 namespace logger {
@@ -29,9 +33,12 @@ void initialise(const std::string &filename) {
 
 void message(const std::string &m) {
   if (stream) {
-    time_t now = time(0);
-    *stream << "[" << std::put_time( std::gmtime( &now ), "%FT%T") << " #" << pid << "] " << m
-            << std::endl;
+
+    auto now = std::chrono::system_clock::now();
+    auto sse = now.time_since_epoch();
+    auto dt = fmt::format("{:%FT%H:%M:}{:%S}", now, sse);
+
+    *stream << "[" << dt << " #" << pid << "] " << m << std::endl;
   }
 }
 
