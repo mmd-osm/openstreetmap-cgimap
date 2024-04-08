@@ -11,6 +11,8 @@
 
 #include <chrono>
 
+using namespace std::literals;
+
 json_formatter::json_formatter(std::unique_ptr<json_writer> w) : writer(std::move(w)) {}
 
 json_formatter::~json_formatter() = default;
@@ -35,20 +37,20 @@ void json_formatter::start_document(
   const std::string &generator, const std::string &root_name) {
   writer->start_object();
 
-  writer->property("version",     output_formatter::API_VERSION);
-  writer->property("generator",   generator);
-  writer->property("copyright",   output_formatter::COPYRIGHT);
-  writer->property("attribution", output_formatter::ATTRIBUTION);
-  writer->property("license",     output_formatter::LICENSE);
+  writer->property("version"sv,     output_formatter::API_VERSION);
+  writer->property("generator"sv,   generator);
+  writer->property("copyright"sv,   output_formatter::COPYRIGHT);
+  writer->property("attribution"sv, output_formatter::ATTRIBUTION);
+  writer->property("license"sv,     output_formatter::LICENSE);
 }
 
 void json_formatter::write_bounds(const bbox &bounds) {
-  writer->object_key("bounds");
+  writer->object_key("bounds"sv);
   writer->start_object();
-  writer->property("minlat", bounds.minlat);
-  writer->property("minlon", bounds.minlon);
-  writer->property("maxlat", bounds.maxlat);
-  writer->property("maxlon", bounds.maxlon);
+  writer->property("minlat"sv, bounds.minlat);
+  writer->property("minlon"sv, bounds.minlon);
+  writer->property("maxlat"sv, bounds.maxlat);
+  writer->property("maxlon"sv, bounds.maxlon);
   writer->end_object();
 }
 
@@ -64,7 +66,7 @@ void json_formatter::start_element_type(element_type type) {
   if (is_in_elements_array)
     return;
 
-  writer->object_key("elements");
+  writer->object_key("elements"sv);
   writer->start_array();
   is_in_elements_array = true;
 }
@@ -84,21 +86,21 @@ void json_formatter::error(const std::exception &e) {
 }
 
 void json_formatter::write_id(const element_info &elem) {
-  writer->property("id", elem.id);
+  writer->property("id"sv, elem.id);
 }
 
 void json_formatter::write_common(const element_info &elem) {
-  writer->property("timestamp", elem.timestamp);
-  writer->property("version",   elem.version);
-  writer->property("changeset", elem.changeset);
+  writer->property("timestamp"sv, elem.timestamp);
+  writer->property("version"sv,   elem.version);
+  writer->property("changeset"sv, elem.changeset);
   if (elem.display_name && elem.uid) {
-    writer->property("user", *elem.display_name);
-    writer->property("uid",  *elem.uid);
+    writer->property("user"sv, *elem.display_name);
+    writer->property("uid"sv,  *elem.uid);
   }
   // At this itme, only the map call is really supported for JSON output,
   // where all elements are expected to be visible.
   if (!elem.visible) {
-    writer->property("visible", elem.visible);
+    writer->property("visible"sv, elem.visible);
   }
 }
 
@@ -106,12 +108,12 @@ void json_formatter::write_node(const element_info &elem, double lon,
                                 double lat, const tags_t &tags) {
   writer->start_object();
 
-  writer->property("type", "node");
+  writer->property("type"sv, "node"sv);
 
   write_id(elem);
   if (elem.visible) {
-    writer->property("lat", lat);
-    writer->property("lon", lon);
+    writer->property("lat"sv, lat);
+    writer->property("lon"sv, lon);
   }
   write_common(elem);
   write_tags(tags);
@@ -123,13 +125,13 @@ void json_formatter::write_way(const element_info &elem, const nodes_t &nodes,
                                const tags_t &tags) {
   writer->start_object();
 
-  writer->property("type", "way");
+  writer->property("type"sv, "way"sv);
 
   write_id(elem);
   write_common(elem);
 
   if (!nodes.empty()) {
-      writer->object_key("nodes");
+      writer->object_key("nodes"sv);
       writer->start_array();
       for (const auto &node : nodes) {
         writer->entry(node);
@@ -147,19 +149,19 @@ void json_formatter::write_relation(const element_info &elem,
                                     const tags_t &tags) {
   writer->start_object();
 
-  writer->property("type", "relation");
+  writer->property("type"sv, "relation"sv);
 
   write_id(elem);
   write_common(elem);
 
   if (!members.empty()) {
-      writer->object_key("members");
+      writer->object_key("members"sv);
       writer->start_array();
       for (const auto & member : members) {
 	  writer->start_object();
-	  writer->property("type", element_type_name(member.type));
-	  writer->property("ref",  member.ref);
-	  writer->property("role", member.role);
+	  writer->property("type"sv, element_type_name(member.type));
+	  writer->property("ref"sv,  member.ref);
+	  writer->property("role"sv, member.role);
 	  writer->end_object();
       }
       writer->end_array();
@@ -177,44 +179,44 @@ void json_formatter::write_changeset(const changeset_info &elem,
                                      const std::chrono::system_clock::time_point &now) {
 
   writer->start_object();
-  writer->property("type", "changeset");
-  writer->property("id", elem.id);
-  writer->property("created_at", elem.created_at);
+  writer->property("type"sv, "changeset"sv);
+  writer->property("id"sv, elem.id);
+  writer->property("created_at"sv, elem.created_at);
 
   const bool is_open = elem.is_open_at(now);
   if (!is_open) {
-      writer->property("closed_at", elem.closed_at);
+      writer->property("closed_at"sv, elem.closed_at);
   }
 
-  writer->property("open", is_open);
+  writer->property("open"sv, is_open);
 
   if (elem.display_name && bool(elem.uid)) {
-    writer->property("user", *elem.display_name);
-    writer->property("uid", *elem.uid);
+    writer->property("user"sv, *elem.display_name);
+    writer->property("uid"sv, *elem.uid);
   }
 
   if (elem.bounding_box) {
-      writer->property("minlat", elem.bounding_box->minlat);
-      writer->property("minlon", elem.bounding_box->minlon);
-      writer->property("maxlat", elem.bounding_box->maxlat);
-      writer->property("maxlon", elem.bounding_box->maxlon);
+      writer->property("minlat"sv, elem.bounding_box->minlat);
+      writer->property("minlon"sv, elem.bounding_box->minlon);
+      writer->property("maxlat"sv, elem.bounding_box->maxlat);
+      writer->property("maxlon"sv, elem.bounding_box->maxlon);
   }
 
-  writer->property("comments_count", elem.comments_count);
-  writer->property("changes_count", elem.num_changes);
+  writer->property("comments_count"sv, elem.comments_count);
+  writer->property("changes_count"sv, elem.num_changes);
 
   write_tags(tags);
 
   if (include_comments && !comments.empty()) {
-      writer->object_key("discussion");
+      writer->object_key("discussion"sv);
       writer->start_array();
       for (const auto & comment : comments) {
 	  writer->start_object();
-	  writer->property("id",   comment.id);
-	  writer->property("date", comment.created_at);
-	  writer->property("uid",  comment.author_id);
-	  writer->property("user", comment.author_display_name);
-	  writer->property("text", comment.body);
+	  writer->property("id"sv,   comment.id);
+	  writer->property("date"sv, comment.created_at);
+	  writer->property("uid"sv,  comment.author_id);
+	  writer->property("user"sv, comment.author_display_name);
+	  writer->property("text"sv, comment.body);
 	  writer->end_object();
       }
       writer->end_array();

@@ -123,6 +123,7 @@ struct comments_columns
 
 // -------------------------------------------------------------------------------------
 
+
 [[nodiscard]] element_info extract_elem(const pqxx_tuple &row,
                   std::map<osm_changeset_id_t, changeset> &changeset_cache,
                   const elem_columns& col) {
@@ -131,7 +132,7 @@ struct comments_columns
 
   elem.id        = row[col.id_col].as<osm_nwr_id_t>();
   elem.version   = row[col.version_col].as<int>();
-  elem.timestamp = row[col.timestamp_col].c_str();
+  elem.timestamp = row[col.timestamp_col].as<std::string>();
   elem.changeset = row[col.changeset_id_col].as<osm_changeset_id_t>();
   elem.visible   = row[col.visible_col].as<bool>();
 
@@ -163,8 +164,8 @@ std::optional<T> extract_optional(const pqxx_field &f) {
   changeset_info elem;
 
   elem.id = row[col.id_col].as<osm_changeset_id_t>();
-  elem.created_at = row[col.created_at_col].c_str();
-  elem.closed_at = row[col.closed_at_col].c_str();
+  elem.created_at = row[col.created_at_col].as<std::string>();
+  elem.closed_at = row[col.closed_at_col].as<std::string>();
 
   const auto & cs = changeset_cache[elem.id];
 
@@ -199,8 +200,8 @@ std::optional<T> extract_optional(const pqxx_field &f) {
 
   tags_t tags;
 
-  auto keys   = psql_array_to_vector(row[col.tag_k_col].c_str());
-  auto values = psql_array_to_vector(row[col.tag_v_col].c_str());
+  auto keys   = psql_array_to_vector(row[col.tag_k_col]);
+  auto values = psql_array_to_vector(row[col.tag_v_col], keys.size());
 
   if (keys.size() != values.size()) {
     throw std::runtime_error("Mismatch in tags key and value size");
@@ -218,7 +219,7 @@ std::optional<T> extract_optional(const pqxx_field &f) {
 
   nodes_t nodes;
 
-  auto ids = psql_array_to_vector(row[col.node_ids_col].c_str());
+  auto ids = psql_array_to_vector(row[col.node_ids_col]);
 
   nodes.reserve(ids.size());
 
@@ -269,9 +270,9 @@ element_type type_from_name(const char *name) {
 
   members_t members;
 
-  auto types = psql_array_to_vector(row[col.member_types_col].c_str());
-  auto ids   = psql_array_to_vector(row[col.member_ids_col].c_str());
-  auto roles = psql_array_to_vector(row[col.member_roles_col].c_str());
+  auto types = psql_array_to_vector(row[col.member_types_col]);
+  auto ids   = psql_array_to_vector(row[col.member_ids_col], types.size());
+  auto roles = psql_array_to_vector(row[col.member_roles_col], types.size());
 
   if (types.size() != ids.size() ||
       ids.size() != roles.size()) {
@@ -303,11 +304,11 @@ element_type type_from_name(const char *name) {
 
   comments_t comments;
 
-  auto id           = psql_array_to_vector(row[col.comment_id_col].c_str());
-  auto author_id    = psql_array_to_vector(row[col.comment_author_id_col].c_str());
-  auto display_name = psql_array_to_vector(row[col.comment_display_name_col].c_str());
-  auto body         = psql_array_to_vector(row[col.comment_body_col].c_str());
-  auto created_at   = psql_array_to_vector(row[col.comment_created_at_col].c_str());
+  auto id           = psql_array_to_vector(row[col.comment_id_col]);
+  auto author_id    = psql_array_to_vector(row[col.comment_author_id_col], id.size());
+  auto display_name = psql_array_to_vector(row[col.comment_display_name_col], id.size());
+  auto body         = psql_array_to_vector(row[col.comment_body_col], id.size());
+  auto created_at   = psql_array_to_vector(row[col.comment_created_at_col], id.size());
 
   if (id.size() != author_id.size() ||
       author_id.size() != display_name.size() ||
@@ -465,6 +466,7 @@ void extract_changesets(
   }
 }
 
+/*
 std::vector<std::string> psql_array_to_vector(std::string_view str) {
   std::vector<std::string> strs;
   std::string value;
@@ -517,3 +519,76 @@ std::vector<std::string> psql_array_to_vector(std::string_view str) {
   }
   return strs;
 }
+*/
+
+
+std::vector<std::string> psql_array_to_vector(std::string_view str,
+    int expected_size) {
+
+  if (str == "{NULL}" || str.empty()) {
+    return {};
+  }
+
+  bool quotedValue = false;
+  bool escaped = false;
+  bool write = false;
+
+  std::array<unsigned char, 255 * 4> buf;
+  int offset = 0;
+
+  std::vector<std::string> strs;
+
+  if (expected_size > 0) {
+    strs.reserve(expected_size);
+  }
+
+  const auto str_size = str.size() - 1;  // ignore trailing } character in input string
+
+  for (unsigned int i = 1; i < str_size; i++) {
+    switch (str[i]) {
+    case ',': {
+      if (quotedValue) {
+        buf[offset++] = ',';
+      } else {
+        write = true;
+      }
+      break;
+    }
+    case '"': {
+      if (escaped) {
+        buf[offset++] = '"';
+        escaped = false;
+      } else {
+        quotedValue ^= true;
+      }
+      break;
+    }
+    case '\\': {
+      if (escaped) {
+        buf[offset++] = '\\';
+      }
+      escaped ^= true;
+      break;
+    }
+    default: {
+      buf[offset++] = str[i];
+    }
+    }
+    if (write) {
+      strs.emplace_back((char*)buf.data(), offset);
+      offset = 0;
+      write = false;
+    }
+  }
+  strs.emplace_back((char*)buf.data(), offset);
+
+  return strs;
+}
+
+std::vector<std::string> psql_array_to_vector(const pqxx::field& f,
+    int expected_size) {
+
+  return (psql_array_to_vector(std::string_view(f.c_str(), f.size()), expected_size));
+
+}
+
