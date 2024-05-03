@@ -4,12 +4,14 @@ FROM ubuntu:20.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && \
+    apt-get install -y postgresql-common gnupg && \
+    /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get install -y gcc g++ make cmake \
        libfcgi-dev libxml2-dev libmemcached-dev libbrotli-dev \
        libboost-program-options-dev \
        libcrypto++-dev libyajl-dev \
        libpqxx-dev zlib1g-dev libfmt-dev \
-       postgresql-12 postgresql-server-dev-all \
+       postgresql-13 postgresql-server-dev-all \
        --no-install-recommends && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
