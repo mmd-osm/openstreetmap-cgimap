@@ -672,6 +672,8 @@ void ApiDB_Node_Updater::insert_new_current_node_tags(
   if (nodes.empty())
     return;
 
+#if PQXX_VERSION_MAJOR < 7
+
   m.prepare("insert_new_current_node_tags",
 
             R"(
@@ -708,6 +710,19 @@ void ApiDB_Node_Updater::insert_new_current_node_tags(
 
   if (r.affected_rows() != total_tags)
     throw http::server_error("Could not create new current node tags");
+#else
+
+  auto stream = m.to_stream("current_node_tags", "node_id, k, v");
+
+  for (const auto &node : nodes) {
+    for (const auto &tag : node.tags) {
+      stream.write_values(node.id, tag.first, tag.second);
+    }
+  }
+
+  stream.complete();
+
+#endif
 }
 
 void ApiDB_Node_Updater::save_current_nodes_to_history(

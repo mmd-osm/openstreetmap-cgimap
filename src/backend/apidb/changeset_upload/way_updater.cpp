@@ -693,6 +693,7 @@ void ApiDB_Way_Updater::insert_new_current_way_tags(
   if (ways.empty())
     return;
 
+#if PQXX_VERSION_MAJOR < 7
   m.prepare("insert_new_current_way_tags",
 
             R"(
@@ -720,6 +721,19 @@ void ApiDB_Way_Updater::insert_new_current_way_tags(
 
   pqxx::result r =
       m.exec_prepared("insert_new_current_way_tags", ids, ks, vs);
+#else
+
+  auto stream = m.to_stream("current_way_tags", "way_id, k, v");
+
+  for (const auto &way : ways) {
+    for (const auto &tag : way.tags) {
+      stream.write_values(way.id, tag.first, tag.second);
+    }
+  }
+
+  stream.complete();
+
+#endif
 }
 
 void ApiDB_Way_Updater::insert_new_current_way_nodes(
@@ -727,6 +741,8 @@ void ApiDB_Way_Updater::insert_new_current_way_nodes(
 
   if (ways.empty())
     return;
+
+#if PQXX_VERSION_MAJOR < 7
 
   m.prepare("insert_new_current_way_nodes",
 
@@ -755,6 +771,19 @@ void ApiDB_Way_Updater::insert_new_current_way_nodes(
 
   pqxx::result r =
       m.exec_prepared("insert_new_current_way_nodes", ids, nodeids, sequenceids);
+#else
+
+  auto stream = m.to_stream("current_way_nodes", "way_id, node_id, sequence_id");
+
+  for (const auto &way : ways) {
+    for (const auto &wn : way.way_nodes) {
+      stream.write_values(way.id, wn.node_id, wn.sequence_id);
+    }
+  }
+
+  stream.complete();
+
+#endif
 }
 
 void ApiDB_Way_Updater::save_current_ways_to_history(
