@@ -20,7 +20,7 @@ COPY . ./
 
 # Compile, install and remove source
 RUN mkdir build && cd build && \
-     CXXFLAGS="-Wall -Wextra -Wpedantic -Wno-unused-parameter" cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release && \
+     CXXFLAGS="-flto=auto -ffat-lto-objects -flto=auto -ffat-lto-objects -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2" cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release && \
      make -j${nproc} && \
      ctest --output-on-failure && \
      cmake --build . -t package
@@ -53,5 +53,5 @@ ENV CGIMAP_INSTANCES=10
 
 EXPOSE 8000
 
-ENTRYPOINT /usr/local/bin/openstreetmap-cgimap --pidfile /tmp/cgimap.pid --logfile=/proc/1/fd/1 --daemon && \
+ENTRYPOINT /usr/bin/openstreetmap-cgimap --pidfile /tmp/cgimap.pid --logfile=/proc/1/fd/1 --daemon && \
            tail --pid=$(cat /tmp/cgimap.pid) -f /dev/null
