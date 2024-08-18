@@ -15,11 +15,7 @@ Package: openstreetmap-cgimap-bin
 Section: contrib/net
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: CGImap is a C++ implementation of the OpenStreetMap API map call
- CGImap is a C++ implementation of some parts of the OpenStreetMap API as an
- FCGI process. The rails implementation of the "map" call had a few problems
- with memory - it uses a lot of it and there is a leak which makes it annoying
- to use in long-running environments, like the main OSM server.
- .
- CGImap attempts to address these memory problems and makes it easier to
- optimise the queries, something which is also a bit of a pain to do in Rails.
+Description: OpenStreetMap CGImap (OSM API accelerator)
+ Performance optimized implementation of selected parts of the
+ OSM API. A comprehensive list of supported endpoints can be
+ found at https://github.com/zerebubuth/openstreetmap-cgimap 
