@@ -44,10 +44,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openstreetmap-cgimap_${{ matrix.version }}
-          path: debian/artifacts/openstreetmap-cgimap-bin_*.deb
+          path: debian/artifacts/openstreetmap-cgimap_*.deb
 
       - name: Upload debugging symbols
         uses: actions/upload-artifact@v4
         with:
           name: openstreetmap-cgimap-dbgsym_${{ matrix.version }}
-          path: debian/artifacts/openstreetmap-cgimap-bin-dbgsym_*.deb
+          path: debian/artifacts/openstreetmap-cgimap-dbgsym_*.deb
