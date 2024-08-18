@@ -38,7 +38,7 @@ jobs:
           docker-image: ${{ matrix.os == 'ubuntu' && format('ubuntu:{0}', matrix.version) || format('debian:{0}-slim', matrix.version) }}
           buildpackage-opts: --build=binary --no-sign
           before-build-hook: debchange --controlmaint --local "+${{ steps.commit.outputs.short }}~${{ matrix.version }}" -b --distribution ${{ matrix.version }} "CI build"
-          extra-build-deps: devscripts git
+          extra-build-deps: devscripts git ninja-build
 
       - name: Upload package
         uses: actions/upload-artifact@v4
