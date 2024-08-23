@@ -7,6 +7,7 @@ on:
 name: "Release: Make release candidate"
 jobs:
   draft_release:
+    if: ${{ false }}
     name: ${{ matrix.os }} ${{ matrix.version }}
     runs-on: ubuntu-latest
     strategy:
@@ -55,5 +56,7 @@ jobs:
           name: Release ${{ github.ref }}
           files: |
             debian/artifacts/openstreetmap-cgimap_*.deb
-        
+            debian/artifacts/openstreetmap-cgimap-dbgsym_*.deb
+
+     
 
