@@ -51,15 +51,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-
-      - name: upload linux artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: .debian/artifacts/openstreetmap-cgimap_*.deb
-          asset_name: openstreetmap-cgimap_${{ matrix.version }}
-          asset_content_type: ${{ matrix.asset_content_type }}
+          files: |
+            .debian/artifacts/openstreetmap-cgimap_*.deb
         
 
