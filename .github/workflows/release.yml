@@ -21,7 +21,6 @@ jobs:
             version: noble
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -48,17 +47,11 @@ jobs:
           before-build-hook: debchange --controlmaint --local "+${{ steps.commit.outputs.short }}~${{ matrix.version }}" -b --distribution ${{ matrix.version }} "CI build"
           extra-build-deps: devscripts git ninja-build
           
-      - name: release
-        uses: actions/create-release@v1
-        id: create_release
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
           draft: true
-          prerelease: false
-          release_name: "Releaese ${{ steps.commit.outputs.short }}~${{ matrix.version }}"
-          tag_name: ${{ github.ref }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}       
-          
+
       - name: upload linux artifact
         uses: actions/upload-release-asset@v1
         env:
