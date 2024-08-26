@@ -3,7 +3,7 @@ name: Build deb package
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-arm64:
     name: ${{ matrix.os }} ${{ matrix.version }}
     runs-on: ubuntu-latest
 
@@ -43,6 +43,7 @@ jobs:
           buildpackage-opts: --build=binary --no-sign
           before-build-hook: debchange --controlmaint --local "+${{ steps.commit.outputs.short }}~${{ matrix.version }}" -b --distribution ${{ matrix.version }} "CI build"
           extra-build-deps: devscripts git ninja-build
+          extra-docker-args: --platform linux/arm64
 
       - name: Upload package
         uses: actions/upload-artifact@v4
