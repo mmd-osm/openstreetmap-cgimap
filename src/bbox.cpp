@@ -8,16 +8,9 @@
  */
 
 #include "cgimap/bbox.hpp"
+#include "cgimap/util.hpp"
 #include <cmath>
 #include <vector>
-#include <boost/algorithm/string.hpp>
-
-namespace al = boost::algorithm;
-
-using std::string;
-using std::max;
-using std::min;
-using std::vector;
 
 bbox::bbox(double minlat_, double minlon_, double maxlat_, double maxlon_)
     : minlat(minlat_), minlon(minlon_), maxlat(maxlat_), maxlon(maxlon_) {}
@@ -30,8 +23,7 @@ bool bbox::operator==(const bbox &other) const {
 }
 
 bool bbox::parse(const std::string &s) {
-  vector<string> strs;
-  al::split(strs, s, al::is_any_of(","));
+  const auto strs = split(s, ',');
 
   if (strs.size() != 4)
     return false;
@@ -53,10 +45,10 @@ bool bbox::parse(const std::string &s) {
 }
 
 void bbox::clip_to_world() {
-  minlon = max(minlon, -180.0);
-  minlat = max(minlat, -90.0);
-  maxlon = min(maxlon, 180.0);
-  maxlat = min(maxlat, 90.0);
+  minlon = std::max(minlon, -180.0);
+  minlat = std::max(minlat, -90.0);
+  maxlon = std::min(maxlon, 180.0);
+  maxlat = std::min(maxlat, 90.0);
 }
 
 bool bbox::valid() const {

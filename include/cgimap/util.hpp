@@ -15,6 +15,7 @@
 #include "cgimap/options.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <clocale>
 #include <cmath>
 #include <cstdlib>
@@ -69,6 +70,87 @@ inline size_t unicode_strlen(const std::string & s)
 }
 
 #endif
+
+inline char tolower_ascii(char c) {
+
+  if (c >= 'A' && c <= 'Z') {
+    return c + ('a' - 'A');
+  }
+  return c;
+}
+
+inline bool ichar_equals(char a, char b) {
+  return a == b ||
+      tolower_ascii(static_cast<unsigned char>(a)) ==
+      tolower_ascii(static_cast<unsigned char>(b));
+}
+
+// Case insensitive string comparison
+inline bool iequals(const std::string &a, const std::string &b) {
+  return a.size() == b.size() &&
+         std::equal(a.begin(), a.end(), b.begin(), b.end(), ichar_equals);
+}
+
+// Remove leading and trailing whitespace from string
+inline std::string trim(const std::string &str) {
+  auto start = str.find_first_not_of(" \t\n\r");
+  if (start == std::string::npos)
+    return "";
+  auto end = str.find_last_not_of(" \t\n\r");
+  return str.substr(start, end - start + 1);
+}
+
+inline std::vector<std::string> split(const std::string &str, char delim,
+                                      bool trim_token) {
+  std::vector<std::string> tokens;
+  size_t start = 0;
+  size_t end = 0;
+
+  while ((end = str.find(delim, start)) != std::string::npos) {
+    if (end != start) {
+      std::string token = str.substr(start, end - start);
+      if (trim_token)
+        token = trim(token);
+      if (!token.empty()) {
+        tokens.push_back(token);
+      }
+    }
+    start = end + 1;
+  }
+
+  if (start < str.length()) {
+    std::string token = str.substr(start);
+    if (trim_token)
+      token = trim(token);
+    if (!token.empty()) {
+      tokens.push_back(token);
+    }
+  }
+
+  return tokens;
+}
+
+inline std::vector<std::string> split(const std::string& str, char delim) {
+    return split(str, delim, false);
+}
+
+inline std::vector<std::string> split_trim(const std::string& str, char delim) {
+    return split(str, delim, true);
+}
+
+template <typename T> T parse_number(std::string_view str) {
+
+  T id{};
+
+  auto [_, ec] = std::from_chars(str.data(), str.data() + str.size(), id);
+
+  if (ec != std::errc()) {
+    // note that this doesn't really make sense without understanding that
+    // "some_string".to_i = 0 in ruby
+    return {};
+  }
+  return id;
+}
 
 inline std::string escape(std::string_view input) {
 
