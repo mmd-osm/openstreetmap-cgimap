@@ -16,33 +16,14 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
-#include <boost/fusion/container/generation/make_cons.hpp>
-#include <boost/fusion/include/make_cons.hpp>
-#include <boost/fusion/container/list.hpp>
-#include <boost/fusion/include/list.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/include/join.hpp>
-#include <boost/fusion/sequence/io.hpp>
-#include <boost/fusion/include/io.hpp>
-#include <boost/fusion/sequence/intrinsic/at.hpp>
-#include <boost/fusion/include/at.hpp>
-#include <boost/fusion/container/list/convert.hpp>
-#include <boost/fusion/include/as_list.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/function_types/function_type.hpp>
-#include <boost/fusion/functional/invocation/invoke.hpp>
-#include <boost/functional/factory.hpp>
-
 namespace match {
 
-using boost::fusion::list;
-using boost::fusion::join;
-using boost::fusion::make_cons;
-using boost::fusion::as_list;
-namespace result_of = boost::fusion::result_of;
+template<typename ... input_t>
+using tuple_cat_t = decltype(std::tuple_cat(std::declval<input_t>()...));
 
 // iterates over the split up parts of the item being matched.
 using part_iterator = std::vector<std::string_view>::const_iterator;
@@ -93,20 +74,18 @@ template <typename Self> struct ops {
 template <typename LeftType, typename RightType>
 struct match_and : public ops<match_and<LeftType, RightType> > {
 
-  using match_type = typename result_of::as_list<typename result_of::join<
-      typename LeftType::match_type,
-      typename RightType::match_type>::type>::type;
+  using match_type = tuple_cat_t<typename LeftType::match_type, typename RightType::match_type>;
 
   match_and(const LeftType &l, const RightType &r) : lhs(l), rhs(r) {}
 
   std::pair<match_type, bool> match(part_iterator &begin, const part_iterator &end) const {
     auto [ lval, lerror ] = lhs.match(begin, end);
     if (lerror)
-      return {as_list(join(typename LeftType::match_type(), typename RightType::match_type())), true};
+      return {std::tuple_cat(typename LeftType::match_type(), typename RightType::match_type()), true};
     auto [ rval, rerror ] = rhs.match(begin, end);
     if (rerror)
-      return {as_list(join(typename LeftType::match_type(), typename RightType::match_type())), true};
-    return {as_list(join(lval, rval)), false};
+      return {std::tuple_cat(typename LeftType::match_type(), typename RightType::match_type()), true};
+    return {std::tuple_cat(lval, rval), false};
   }
 
 private:
@@ -119,7 +98,7 @@ private:
  */
 struct match_string : public ops<match_string> {
   // doesn't return anything, simply fails if the string doesn't match.
-  using match_type = list<>;
+  using match_type = std::tuple<>;
 
   // implicit constructor intended, so that the use of this class is
   // hidden and easier / nicer to read.
@@ -138,7 +117,7 @@ private:
  * match an OSM ID, returning it in the match tuple.
  */
 struct match_osm_id : public ops<match_osm_id> {
-  using match_type = list<osm_nwr_id_t>;
+  using match_type = std::tuple<osm_nwr_id_t>;
   match_osm_id() = default;
   std::pair<match_type, bool> match(part_iterator &begin, const part_iterator &end) const noexcept;
 };
@@ -149,7 +128,7 @@ struct match_osm_id : public ops<match_osm_id> {
  * without needing explicit constructors for the string literal matches.
  */
 struct match_begin : public ops<match_begin> {
-  using match_type = list<>;
+  using match_type = std::tuple<>;
   match_begin() = default;
   inline std::pair<match_type, bool> match(part_iterator &begin, const part_iterator &end) const noexcept{
     return {match_type(), false};

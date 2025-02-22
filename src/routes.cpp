@@ -94,11 +94,11 @@ struct router {
       if (begin != parts.end())
         return false; // no match
 
-      // the function to call (used later as constructor factory)
-      boost::factory<Handler *> func{};
-
-      ptr.reset(
-          boost::fusion::invoke(func, boost::fusion::make_cons(std::ref(params), sequence)));
+      ptr.reset(std::apply(
+          [&params](auto &&...args) {
+            return new Handler(params, std::forward<decltype(args)>(args)...);
+          },
+          sequence));
 
       return true;
     }
