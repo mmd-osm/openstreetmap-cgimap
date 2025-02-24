@@ -60,7 +60,7 @@ include(BuildLint)
 #########################
 add_library(cgimap_common_compiler_options INTERFACE)
 
-target_compile_features(cgimap_common_compiler_options INTERFACE cxx_std_17)
+target_compile_features(cgimap_common_compiler_options INTERFACE cxx_std_20)
 target_compile_definitions(cgimap_common_compiler_options INTERFACE CMAKE=1
                            BOOST_BIND_GLOBAL_PLACEHOLDERS)
 target_add_autotools_compatibility_definitions(cgimap_common_compiler_options)
@@ -157,7 +157,7 @@ if(CLANG_TIDY)
 
     add_custom_target(clang-tidy
         ${CLANG_TIDY}
-        -extra-arg=-std=c++17
+        -extra-arg=-std=c++20
         -p ${CMAKE_BINARY_DIR}
         ${CT_CHECK_FILES}
     )
