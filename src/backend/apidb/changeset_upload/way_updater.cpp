@@ -638,7 +638,7 @@ void ApiDB_Way_Updater::lock_future_nodes(const std::vector<way_t> &ways) {
 
     for (const auto &w : ways)
       for (const auto &wn : w.way_nodes)
-        if (missing_nodes.find(wn.node_id) != missing_nodes.end())
+        if (missing_nodes.contains(wn.node_id))
           absent_way_node_ids[w.old_id].insert(
               wn.node_id); // return node id in osmChange for error msg
 
@@ -701,9 +701,9 @@ void ApiDB_Way_Updater::update_current_ways(const std::vector<way_t> &ways,
   // update modified ways table
   for (const auto &row : r) {
     if (visible)
-      ct.modified_way_ids.push_back({ id_to_old_id[row[id_col].as<osm_nwr_id_t>()],
-                                       row[id_col].as<osm_nwr_id_t>(),
-                                       row[version_col].as<osm_version_t>() });
+      ct.modified_way_ids.push_back({id_to_old_id[row[id_col].as<osm_nwr_id_t>()],
+                                    row[id_col].as<osm_nwr_id_t>(),
+                                    row[version_col].as<osm_version_t>()});
     else
       ct.deleted_way_ids.push_back({ id_to_old_id[row[id_col].as<osm_nwr_id_t>()] });
   }
@@ -738,10 +738,10 @@ std::vector<osm_nwr_id_t> ApiDB_Way_Updater::insert_new_current_way_tags(
   unsigned total_tags = 0;
 
   for (const auto &way : ways) {
-    for (const auto &tag : way.tags) {
+    for (const auto & [key, value] : way.tags) {
       ids.emplace_back(way.id);
-      ks.emplace_back(escape(tag.first));
-      vs.emplace_back(escape(tag.second));
+      ks.emplace_back(escape(key));
+      vs.emplace_back(escape(value));
       ++total_tags;
     }
   }
@@ -928,7 +928,7 @@ ApiDB_Way_Updater::is_way_still_referenced(const std::vector<way_t> &ways) {
 
     // OsmChange documents wants to delete a way that is still referenced,
     // and the if-unused flag hasn't been set!
-    if (ids_without_if_unused.find(way_id) != ids_without_if_unused.end()) {
+    if (ids_without_if_unused.contains(way_id)) {
 
       // Without the if-unused, such a situation would lead to an error, and the
       // whole diff upload would fail.
@@ -938,7 +938,7 @@ ApiDB_Way_Updater::is_way_still_referenced(const std::vector<way_t> &ways) {
            row["relation_ids"].c_str()));
     }
 
-    if (ids_if_unused.find(way_id) != ids_if_unused.end()) {
+    if (ids_if_unused.contains(way_id)) {
       /* a <delete> block in the OsmChange document may have an if-unused
        * attribute
        * If this attribute is present, then the delete operation(s) in this
@@ -956,13 +956,9 @@ ApiDB_Way_Updater::is_way_still_referenced(const std::vector<way_t> &ways) {
 
   if (!ways_to_exclude_from_deletion.empty()) {
 
-    updated_ways.erase(
-        std::remove_if(updated_ways.begin(), updated_ways.end(),
-                       [&](const way_t &a) {
-                         return ways_to_exclude_from_deletion.find(a.id) !=
-                                ways_to_exclude_from_deletion.end();
-                       }),
-        updated_ways.end());
+    std::erase_if(updated_ways, [&ways_to_exclude_from_deletion](const way_t &a) {
+                         return ways_to_exclude_from_deletion.contains(a.id);
+                       });
 
     // Return old_id, new_id and current version to the caller in case of
     // if-unused, so it's clear that the delete operation was *not* executed,
@@ -990,10 +986,10 @@ ApiDB_Way_Updater::is_way_still_referenced(const std::vector<way_t> &ways) {
       // should not lead to an error. All we can do now is to return old_id,
       // new_id and the current version to the caller
 
-      ct.skip_deleted_way_ids.push_back(
-          { id_to_old_id[row[id_col].as<osm_nwr_id_t>()],
-	    row[id_col].as<osm_nwr_id_t>(),
-            row[version_col].as<osm_version_t>() });
+      ct.skip_deleted_way_ids.push_back({
+          id_to_old_id[row[id_col].as<osm_nwr_id_t>()],
+	        row[id_col].as<osm_nwr_id_t>(),
+          row[version_col].as<osm_version_t>()});
     }
   }
 

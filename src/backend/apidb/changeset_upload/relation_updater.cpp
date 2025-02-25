@@ -557,7 +557,7 @@ ApiDB_Relation_Updater::build_packages(
   std::map<osm_nwr_id_t, unsigned int> id_to_package;
 
   for (const auto &relation : relations) {
-    if (id_to_package.find(relation.id) == id_to_package.end())
+    if (!id_to_package.contains(relation.id))
       id_to_package[relation.id] = 0;
     else
       ++id_to_package[relation.id];
@@ -654,7 +654,7 @@ ApiDB_Relation_Updater::determine_already_deleted_relations(
 
     // OsmChange documents wants to delete a relation that is already deleted,
     // and the if-unused flag hasn't been set!
-    if (ids_without_if_unused.find(id) != ids_without_if_unused.end()) {
+    if (ids_without_if_unused.contains(id)) {
       throw http::gone(
           fmt::format("The relation with the id {:d} has already been deleted", id));
     }
@@ -666,7 +666,7 @@ ApiDB_Relation_Updater::determine_already_deleted_relations(
     // only thing left to do in this scenario is to return old_id, new_id and
     // the current version to the caller
 
-    if (ids_if_unused.find(id) != ids_if_unused.end()) {
+    if (ids_if_unused.contains(id)) {
 
       ct.skip_deleted_relation_ids.push_back(
           { id_to_old_id[row["id"].as<osm_nwr_id_t>()],
@@ -715,7 +715,7 @@ void ApiDB_Relation_Updater::lock_future_members_nodes(
     for (const auto &rel : relations)
       for (const auto &rm : rel.members)
         if (rm.member_type == "Node" &&
-            missing_nodes.find(rm.member_id) != missing_nodes.end())
+            missing_nodes.contains(rm.member_id))
           absent_rel_node_ids[rel.old_id].insert(
               rm.member_id); // return rel id in osmChange for error msg
 
@@ -767,7 +767,7 @@ void ApiDB_Relation_Updater::lock_future_members_ways(
     for (const auto &rel : relations)
       for (const auto &rm : rel.members)
         if (rm.member_type == "Way" &&
-            missing_nodes.find(rm.member_id) != missing_nodes.end())
+            missing_nodes.contains(rm.member_id))
           absent_rel_way_ids[rel.old_id].insert(
               rm.member_id); // return rel id in osmChange for error msg
 
@@ -821,7 +821,7 @@ void ApiDB_Relation_Updater::lock_future_members_relations(
     for (const auto &rel : relations)
       for (const auto &rm : rel.members)
         if (rm.member_type == "Relation" &&
-            missing_nodes.find(rm.member_id) != missing_nodes.end())
+            missing_nodes.contains(rm.member_id))
           absent_rel_rel_ids[rel.old_id].insert(
               rm.member_id); // return rel id in osmChange for error msg
 
@@ -948,10 +948,10 @@ ApiDB_Relation_Updater::relations_with_changed_relation_tags(
   std::vector<std::string> vs;
 
   for (const auto &relation : relations)
-    for (const auto &tag : relation.tags) {
+    for (const auto &[key, value] : relation.tags) {
       ids.push_back(relation.id);
-      ks.push_back(escape(tag.first));
-      vs.push_back(escape(tag.second));
+      ks.push_back(escape(key));
+      vs.push_back(escape(value));
     }
 
   m.prepare("relations_with_changed_relation_tags",
@@ -1303,7 +1303,7 @@ void ApiDB_Relation_Updater::update_current_relations(
     if (visible) {
       ct.modified_relation_ids.push_back(
           { id_to_old_id[row["id"].as<osm_nwr_id_t>()],
-	    row["id"].as<osm_nwr_id_t>(),
+	          row["id"].as<osm_nwr_id_t>(),
             row["version"].as<osm_version_t>() });
     } else {
       ct.deleted_relation_ids.push_back({ id_to_old_id[row["id"].as<osm_nwr_id_t>()] });
@@ -1340,10 +1340,10 @@ std::vector<osm_nwr_id_t>  ApiDB_Relation_Updater::insert_new_current_relation_t
   unsigned total_tags = 0;
 
   for (const auto &relation : relations) {
-    for (const auto &tag : relation.tags) {
+    for (const auto &[key, value] : relation.tags) {
       ids.emplace_back(relation.id);
-      ks.emplace_back(escape(tag.first));
-      vs.emplace_back(escape(tag.second));
+      ks.emplace_back(escape(key));
+      vs.emplace_back(escape(value));
       ++total_tags;
     }
   }
@@ -1508,11 +1508,8 @@ ApiDB_Relation_Updater::remove_blocked_relations_from_deletion_list (
   if (relations_to_exclude_from_deletion.empty())
     return;
 
-  updated_relations.erase(std::remove_if(updated_relations.begin(), updated_relations.end(),
-			    [&](const relation_t &a) {
-				    return relations_to_exclude_from_deletion.find(a.id) !=
-					   relations_to_exclude_from_deletion.end(); }),
-			    updated_relations.end());
+  std::erase_if(updated_relations, [&](const relation_t &a) {
+				    return relations_to_exclude_from_deletion.contains(a.id); });
 
   // Return old_id, new_id and current version to the caller in case of
   // if-unused, so it's clear that the delete operation was *not* executed,
@@ -1574,10 +1571,10 @@ ApiDB_Relation_Updater::collect_recursive_relation_rel_member_ids (
 
     for (const auto &row : r_children) {
       auto rel_id = row["member_id"].as<osm_nwr_id_t> ();
-      auto res = transitive_relation_children_ids.insert (rel_id);
+      auto [_, inserted] = transitive_relation_children_ids.insert (rel_id);
 
       // Relation members are only added to next iteration if we haven't processed them before
-      if (res.second)
+      if (inserted)
         next_iteration_relation_ids.insert (rel_id);
     }
 
@@ -1623,7 +1620,7 @@ ApiDB_Relation_Updater::extend_deletion_block_to_relation_children (
 
   // Mark all child relations of still referenced relations to be excluded from deletion
   for (const auto id : transitive_relation_children_ids) {
-    if (ids_if_unused.find(id) != ids_if_unused.end()) {
+    if (ids_if_unused.contains(id)) {
       relations_to_exclude_from_deletion.insert(id);
     }
   }
@@ -1709,7 +1706,7 @@ ApiDB_Relation_Updater::is_relation_still_referenced(
 
     // OsmChange documents wants to delete a relation that is still referenced,
     // and the if-unused flag hasn't been set!
-    if (ids_without_if_unused.find(rel_id) != ids_without_if_unused.end()) {
+    if (ids_without_if_unused.contains(rel_id)) {
 
       // Without the if-unused, such a situation would lead to an error, and the
       // whole diff upload would fail.
@@ -1719,7 +1716,7 @@ ApiDB_Relation_Updater::is_relation_still_referenced(
            row["relation_ids"].c_str()));
     }
 
-    if (ids_if_unused.find(rel_id) != ids_if_unused.end()) {
+    if (ids_if_unused.contains(rel_id)) {
       /* a <delete> block in the OsmChange document may have an if-unused
        * attribute. If this attribute is present, then the delete operation(s)
        * in this block are conditional and will only be executed if the object
