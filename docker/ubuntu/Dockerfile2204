@@ -4,7 +4,7 @@ FROM ubuntu:22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && \
-    apt-get install -y gcc g++ make cmake \
+    apt-get install -y gcc-12 g++-12 make cmake \
        libfcgi-dev libxml2-dev libmemcached-dev libbrotli-dev \
        libboost-program-options-dev libcrypto++-dev libyajl-dev \
        libpqxx-dev zlib1g-dev libfmt-dev \
@@ -20,7 +20,7 @@ COPY . ./
 
 # Compile, install and remove source
 RUN mkdir build && cd build && \
-     CXXFLAGS="-Wall -Wextra -Wpedantic -Wno-unused-parameter" cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release && \
+     CXXFLAGS="-Wall -Wextra -Wpedantic -Wno-unused-parameter" cmake .. -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_C_COMPILER=gcc-12 && \
      make -j${nproc} && \
      ctest --output-on-failure && \
      cmake --build . -t package
