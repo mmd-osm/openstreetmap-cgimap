@@ -46,8 +46,8 @@ void ApiDB_Node_Updater::add_node(double lat, double lon,
                                   const api06::TagList &tags) {
 
   node_t new_node{ .version = 1,
-                   .lat = round(lat * global_settings::get_scale()),
-                   .lon = round(lon * global_settings::get_scale()),
+                   .lat = static_cast<int64_t>(round(lat * global_settings::get_scale())),
+                   .lon = static_cast<int64_t>(round(lon * global_settings::get_scale())),
                    .tile = xy2tile(lon2x(lon), lat2y(lat)),
                    .changeset_id = changeset_id,
                    .old_id = old_id};
@@ -68,11 +68,11 @@ void ApiDB_Node_Updater::modify_node(double lat, double lon,
 
   node_t modify_node{ .id = id,
                       .version = version,
-                      .lat = round(lat * global_settings::get_scale()),
-                      .lon = round(lon * global_settings::get_scale()),
+                      .lat = static_cast<int64_t>(round(lat * global_settings::get_scale())),
+                      .lon = static_cast<int64_t>(round(lon * global_settings::get_scale())),
                       .tile = xy2tile(lon2x(lon), lat2y(lat)),
                       .changeset_id = changeset_id,
-                      .old_id = id};
+                      .old_id = static_cast<osm_nwr_signed_id_t>(id)};
 
   for (const auto &[key, value] : tags)
     modify_node.tags.emplace_back(key, value);
@@ -90,7 +90,7 @@ void ApiDB_Node_Updater::delete_node(osm_changeset_id_t changeset_id,
   node_t delete_node{ .id = id,
                       .version = version,
                       .changeset_id = changeset_id,
-                      .old_id = id,
+                      .old_id = static_cast<osm_nwr_signed_id_t>(id),
                       .if_unused = if_unused};
 
   delete_nodes.push_back(delete_node);

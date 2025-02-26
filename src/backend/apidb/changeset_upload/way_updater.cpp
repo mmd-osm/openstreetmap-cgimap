@@ -78,7 +78,7 @@ void ApiDB_Way_Updater::modify_way(osm_changeset_id_t changeset_id,
     .id = id,
     .version = version,
     .changeset_id = changeset_id,
-    .old_id = id
+    .old_id = static_cast<osm_nwr_signed_id_t>(id)
   };
 
   for (const auto &[key, value] : tags)
@@ -109,7 +109,7 @@ void ApiDB_Way_Updater::delete_way(osm_changeset_id_t changeset_id,
     .id = id,
     .version = version,
     .changeset_id = changeset_id,
-    .old_id = id,
+    .old_id = static_cast<osm_nwr_signed_id_t>(id),
     .if_unused = if_unused
   };
 

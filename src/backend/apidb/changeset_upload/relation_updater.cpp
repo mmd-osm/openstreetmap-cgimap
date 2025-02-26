@@ -53,7 +53,7 @@ void ApiDB_Relation_Updater::add_relation(osm_changeset_id_t changeset_id,
   for (const auto &member : members) {
     member_t new_member{
       .member_type = member.type(),
-      .member_id = (member.ref() < 0 ? 0 : member.ref()),
+      .member_id = static_cast<osm_nwr_id_t>(member.ref() < 0 ? 0 : member.ref()),
       .member_role = member.role(),
       .sequence_id = member_seq++,
       .old_member_id = member.ref()
@@ -78,7 +78,7 @@ void ApiDB_Relation_Updater::modify_relation(osm_changeset_id_t changeset_id,
     .id = id,
     .version = version,
     .changeset_id = changeset_id,
-    .old_id = id
+    .old_id = static_cast<osm_nwr_signed_id_t>(id)
   };
 
   for (const auto &[key, value] : tags)
@@ -88,7 +88,7 @@ void ApiDB_Relation_Updater::modify_relation(osm_changeset_id_t changeset_id,
   for (const auto &member : members) {
     member_t modify_member{
       .member_type = member.type(),
-      .member_id = (member.ref() < 0 ? 0 : member.ref()),
+      .member_id = static_cast<osm_nwr_id_t>(member.ref() < 0 ? 0 : member.ref()),
       .member_role = member.role(),
       .sequence_id = member_seq++,
       .old_member_id = member.ref()
@@ -112,7 +112,7 @@ void ApiDB_Relation_Updater::delete_relation(osm_changeset_id_t changeset_id,
     .id = id,
     .version = version,
     .changeset_id = changeset_id,
-    .old_id = id,
+    .old_id = static_cast<osm_nwr_signed_id_t>(id),
     .if_unused = if_unused
   };
 
