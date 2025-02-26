@@ -249,7 +249,7 @@ process_get_request(request& req, const handler& handler,
  * process a POST/PUT request.
  */
 std::tuple<std::string, size_t>
-process_post_put_request(RequestContext& req_ctx, 
+process_post_put_request(RequestContext& req_ctx,
                          const handler& handler,
                          const data_selection::factory& factory,
                          data_update::factory& update_factory,
@@ -463,10 +463,9 @@ void process_request(request &req, rate_limiter &limiter,
     if (user_id) {
         client_key = (fmt::format("{}{}", user_prefix, (*user_id)));
 
-        // C++20: switch to designated initializer for readability
-        req_ctx.user = UserInfo{ *user_id, 
-                                 selection->get_roles_for_user(*user_id), 
-                                 allow_api_write };
+        req_ctx.user = UserInfo{ .id = *user_id,
+                                 .user_roles = selection->get_roles_for_user(*user_id),
+                                 .allow_api_write = allow_api_write };
     }
 
     const auto is_moderator = req_ctx.is_moderator();
