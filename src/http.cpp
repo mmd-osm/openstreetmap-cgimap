@@ -230,7 +230,7 @@ std::unique_ptr<encoding> choose_encoding(const std::string &accept_encoding) {
   std::vector<std::string_view> encodings;
 
   for (auto parts = std::ranges::views::split(accept_encoding, ", "sv); auto&& part : parts) {
-    encodings.emplace_back(part.begin(), part.end());
+    encodings.emplace_back(&*part.begin(), std::ranges::distance(part));
   }
 
   float identity_quality = 0.000;
@@ -250,7 +250,7 @@ std::unique_ptr<encoding> choose_encoding(const std::string &accept_encoding) {
     std::vector<std::string> what;
 
     for (auto parts = std::ranges::views::split(encoding, ";q="sv); auto&& part : parts) {
-      what.emplace_back(part.begin(), part.end());
+      what.emplace_back(std::string(&*part.begin(), std::ranges::distance(part)));
     }
 
     if (what.size() == 2) {
