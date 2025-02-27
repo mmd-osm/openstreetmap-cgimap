@@ -293,8 +293,7 @@ void ApiDB_Relation_Updater::process_delete_relations() {
       determine_already_deleted_relations(delete_relations);
 
   for (const auto &relation : delete_relations)
-    if (already_deleted_relations.find(relation.id) ==
-        already_deleted_relations.end()) {
+    if (!already_deleted_relations.contains(relation.id)) {
       delete_relations_visible.push_back(relation);
       ids_visible.push_back(relation.id);
     }

@@ -240,7 +240,7 @@ void ApiDB_Way_Updater::process_delete_ways() {
   auto already_deleted_ways = determine_already_deleted_ways(delete_ways);
 
   for (const auto &way : delete_ways)
-    if (already_deleted_ways.find(way.id) == already_deleted_ways.end()) {
+    if (!already_deleted_ways.contains(way.id)) {
       delete_ways_visible.push_back(way);
       ids_visible.push_back(way.id);
     }
@@ -464,7 +464,7 @@ ApiDB_Way_Updater::build_packages(const std::vector<way_t> &ways) {
   std::map<osm_nwr_id_t, unsigned int> id_to_package;
 
   for (const auto &way : ways) {
-    if (id_to_package.find(way.id) == id_to_package.end())
+    if (!id_to_package.contains(way.id))
       id_to_package[way.id] = 0;
     else
       ++id_to_package[way.id];
@@ -567,7 +567,7 @@ std::set<osm_nwr_id_t> ApiDB_Way_Updater::determine_already_deleted_ways(
 
     // OsmChange documents wants to delete a way that is already deleted,
     // and the if-unused flag hasn't been set!
-    if (ids_without_if_unused.find(id) != ids_without_if_unused.end()) {
+    if (ids_without_if_unused.contains(id)) {
       throw http::gone(
           fmt::format("The way with the id {:d} has already been deleted", id));
     }
@@ -578,7 +578,7 @@ std::set<osm_nwr_id_t> ApiDB_Way_Updater::determine_already_deleted_ways(
     // We have identified a way that is already deleted on the server. The only
     // thing left to do in this scenario is to return old_id, new_id and the
     // current version to the caller
-    if (ids_if_unused.find(id) != ids_if_unused.end()) {
+    if (ids_if_unused.contains(id)) {
 
       ct.skip_deleted_way_ids.push_back(
           { id_to_old_id[row[id_col].as<osm_nwr_id_t>()],
