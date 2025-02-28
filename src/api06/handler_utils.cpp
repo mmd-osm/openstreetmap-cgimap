@@ -76,7 +76,7 @@ std::vector<id_version> parse_id_list_params(const request &req,
   }
 
   // ensure list of IDs is unique
-  std::sort(myids.begin(), myids.end());
+  std::ranges::sort(myids);
   auto new_end = std::unique(myids.begin(), myids.end());
   myids.erase(new_end, myids.end());
 

@@ -117,7 +117,7 @@ void ApiDB_Node_Updater::process_new_nodes() {
     ids.emplace_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   // lock_current_nodes(ids);    // INSERT already set RowExclusiveLock earlier on
@@ -142,7 +142,7 @@ void ApiDB_Node_Updater::process_modify_nodes() {
     ids.push_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   lock_current_nodes(ids);
@@ -159,7 +159,7 @@ void ApiDB_Node_Updater::process_modify_nodes() {
       ids_package.push_back(id.id);
 
     // remove duplicates
-    std::sort(ids_package.begin(), ids_package.end());
+    std::ranges::sort(ids_package);
     ids_package.erase(std::unique(ids_package.begin(), ids_package.end()),
                       ids_package.end());
 
@@ -195,7 +195,7 @@ void ApiDB_Node_Updater::process_delete_nodes() {
     ids.push_back(node.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   lock_current_nodes(ids);
@@ -623,13 +623,11 @@ void ApiDB_Node_Updater::update_current_nodes(
 
     std::set<osm_nwr_id_t> diff;
 
-    std::set_difference(ids_set.begin(), ids_set.end(), processed_ids.begin(),
-                        processed_ids.end(), std::inserter(diff, diff.end()));
+    std::ranges::set_difference(ids_set, processed_ids, std::inserter(diff, diff.end()));
 
     auto unknown_id = (*diff.begin()); // Just take first element
     auto unknown_node =
-        std::find_if(nodes.begin(), nodes.end(),
-                     [&](const node_t &n) { return n.id == unknown_id; });
+        std::ranges::find_if(nodes, [&](const node_t &n) { return n.id == unknown_id; });
 
     throw http::server_error(
         fmt::format(
@@ -768,7 +766,7 @@ std::vector<osm_nwr_id_t> ApiDB_Node_Updater::insert_new_current_node_tags(
 #endif
 
   // prepare list of node ids with tags
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
   return ids;
 }

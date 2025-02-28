@@ -138,7 +138,7 @@ void ApiDB_Way_Updater::process_new_ways() {
     ids.emplace_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   // lock_current_ways(ids);  // INSERT already set RowExclusiveLock earlier on
@@ -168,7 +168,7 @@ void ApiDB_Way_Updater::process_modify_ways() {
     ids.push_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   lock_current_ways(ids);
@@ -186,7 +186,7 @@ void ApiDB_Way_Updater::process_modify_ways() {
       ids_package.push_back(id.id);
 
     // remove duplicates
-    std::sort(ids_package.begin(), ids_package.end());
+    std::ranges::sort(ids_package);
     ids_package.erase(std::unique(ids_package.begin(), ids_package.end()),
                       ids_package.end());
 
@@ -229,7 +229,7 @@ void ApiDB_Way_Updater::process_delete_ways() {
     ids.push_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   lock_current_ways(ids);
@@ -611,7 +611,7 @@ void ApiDB_Way_Updater::lock_future_nodes(const std::vector<way_t> &ways) {
     return; // nothing to do
 
   // remove duplicates
-  std::sort(node_ids.begin(), node_ids.end());
+  std::ranges::sort(node_ids);
   node_ids.erase(std::unique(node_ids.begin(), node_ids.end()), node_ids.end());
 
   m.prepare("lock_future_nodes_in_ways",
@@ -776,7 +776,7 @@ std::vector<osm_nwr_id_t> ApiDB_Way_Updater::insert_new_current_way_tags(
 #endif
 
   // prepare list of way ids with tags
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
   return ids;
 }

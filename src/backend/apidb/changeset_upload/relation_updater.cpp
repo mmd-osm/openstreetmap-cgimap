@@ -142,7 +142,7 @@ void ApiDB_Relation_Updater::process_new_relations() {
     ids.emplace_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   // lock_current_relations(ids);     // INSERT already set RowExclusiveLock earlier on
@@ -172,7 +172,7 @@ void ApiDB_Relation_Updater::process_modify_relations() {
     ids.push_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   lock_current_relations(ids);
@@ -190,7 +190,7 @@ void ApiDB_Relation_Updater::process_modify_relations() {
       ids_package.push_back(id.id);
 
     // remove duplicates
-    std::sort(ids_package.begin(), ids_package.end());
+    std::ranges::sort(ids_package);
     ids_package.erase(std::unique(ids_package.begin(), ids_package.end()),
                       ids_package.end());
 
@@ -281,7 +281,7 @@ void ApiDB_Relation_Updater::process_delete_relations() {
     ids.push_back(id.id);
 
   // remove duplicates
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
   lock_current_relations(ids);
@@ -688,7 +688,7 @@ void ApiDB_Relation_Updater::lock_future_members_nodes(
   if (node_ids.empty())
     return;
 
-  std::sort(node_ids.begin(), node_ids.end());
+  std::ranges::sort(node_ids);
   node_ids.erase(std::unique(node_ids.begin(), node_ids.end()), node_ids.end());
 
   m.prepare("lock_future_nodes_in_relations",
@@ -738,7 +738,7 @@ void ApiDB_Relation_Updater::lock_future_members_ways(
   if (way_ids.empty())
     return;
 
-  std::sort(way_ids.begin(), way_ids.end());
+  std::ranges::sort(way_ids);
   way_ids.erase(std::unique(way_ids.begin(), way_ids.end()), way_ids.end());
 
   m.prepare("lock_future_ways_in_relations",
@@ -791,7 +791,7 @@ void ApiDB_Relation_Updater::lock_future_members_relations(
   if (relation_ids.empty())
     return;
 
-  std::sort(relation_ids.begin(), relation_ids.end());
+  std::ranges::sort(relation_ids);
   relation_ids.erase(std::unique(relation_ids.begin(), relation_ids.end()),
                      relation_ids.end());
 
@@ -1378,7 +1378,7 @@ std::vector<osm_nwr_id_t>  ApiDB_Relation_Updater::insert_new_current_relation_t
 #endif
 
   // prepare list of relation ids with tags
-  std::sort(ids.begin(), ids.end());
+  std::ranges::sort(ids);
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
   return ids;
 
