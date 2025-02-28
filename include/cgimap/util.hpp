@@ -127,7 +127,7 @@ inline std::vector<std::string_view> split(std::string_view str, char delim) {
     return result;
 }
 
-template <typename T> T parse_number(std::string_view str) {
+template <typename T> T parse_ruby_number(std::string_view str) {
 
   T id{};
 
