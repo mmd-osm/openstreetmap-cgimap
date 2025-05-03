@@ -22,10 +22,9 @@
 #include <fmt/core.h>
 
 #include <cassert>
-#include <memory>
 #include <string>
-#include <utility>
-#include <vector>
+#include <type_traits>
+
 
 
 namespace api06 {
@@ -42,6 +41,34 @@ using SJParser::Value;
 using SJParser::Reaction;
 using SJParser::ObjectOptions;
 using SJParser::Presence::Optional;
+using SJParser::Ignore;
+
+
+// FixedValue allows to set a fixed value for a member
+// and ignore the value in the payload
+template <typename T>
+class FixedValue : public Ignore {
+public:
+  using ValueType = std::conditional_t<std::is_enum_v<T>, std::underlying_type_t<T>, T>;
+
+  FixedValue() = default;
+
+  explicit FixedValue(T value) : _value{ static_cast<ValueType>(value) } {
+    setNotEmpty();
+  }
+
+  [[nodiscard]] const ValueType &get() const {
+    return _value;
+  }
+
+  [[nodiscard]] ValueType &&pop() {
+    unset();
+    return std::move(_value);
+  }
+
+  private:
+    ValueType _value{};
+};
 
 class OSMChangeJSONParserFormat {
 
@@ -55,11 +82,10 @@ class OSMChangeJSONParserFormat {
   }
 
   template <typename ElementParserCallback = std::nullptr_t>
-  static auto getElementsParser(ElementParserCallback element_parser_callback = nullptr) {
+  static auto getElementsParser(operation op, ElementParserCallback element_parser_callback = nullptr) {
     return Object{
           std::tuple{
             Member{"type", Value<std::string>{}},
-            Member{"action", Value<std::string>{}},
             Member{"if-unused", Value<bool>{}, Optional, false},
             Member{"id", Value<int64_t>{}},
             Member{"lat", Value<double>{}, Optional},
@@ -68,10 +94,25 @@ class OSMChangeJSONParserFormat {
             Member{"changeset", Value<int64_t>{}},
             Member{"tags", SMap{Value<std::string>{}}, Optional},
             Member{"nodes", SArray{Value<int64_t>{}}, Optional},
-            Member{"members", SArray{getMemberParser()}, Optional}
+            Member{"members", SArray{getMemberParser()}, Optional},
+             // internal property to set the action (create/modify/delete), payload value is ignored
+            Member{"_action_", FixedValue{op}, Optional},
           },
         ObjectOptions{Reaction::Ignore},
         element_parser_callback};
+  }
+
+  template <typename ElementParserCallback = std::nullptr_t>
+  static auto getOsmChangeParser(ElementParserCallback element_parser_callback = nullptr) {
+    using enum operation;
+    return Object{
+          std::tuple{
+            Member{"create", Array{getElementsParser(op_create, element_parser_callback)}, Optional},
+            Member{"modify", Array{getElementsParser(op_modify, element_parser_callback)}, Optional},
+            Member{"delete", Array{getElementsParser(op_delete, element_parser_callback)}, Optional}
+          },
+        ObjectOptions{Reaction::Ignore}
+        };
   }
 
   template <typename ElementParserCallback = std::nullptr_t,
@@ -83,8 +124,10 @@ class OSMChangeJSONParserFormat {
         std::tuple{
           Member{"version", Value<std::string>{check_version_callback}},
           Member{"generator", Value<std::string>{}, Optional},
-          Member{"osmChange",  Array{getElementsParser(element_parser_callback)}}
-        },ObjectOptions{Reaction::Ignore}}};
+          Member{"osmChange", getOsmChangeParser(element_parser_callback)}
+        },
+        ObjectOptions{Reaction::Ignore}
+      }};
   }
 
   friend class OSMChangeJSONParser;
@@ -125,7 +168,7 @@ public:
 
 private:
 
-  using ElementsParser = decltype(api06::OSMChangeJSONParserFormat::getElementsParser());
+  using ElementsParser = decltype(api06::OSMChangeJSONParserFormat::getElementsParser(operation::op_undefined));
   using MainParser = decltype(api06::OSMChangeJSONParserFormat::getMainParser());
 
   MainParser _parser{api06::OSMChangeJSONParserFormat::getMainParser(
@@ -159,32 +202,25 @@ private:
 
   void process_action(ElementsParser &parser) {
 
-    using enum operation;
-    const std::string& action = parser.get<1>();
-
-    if (action == "create") {
-      m_operation = op_create;
-    } else if (action == "modify") {
-      m_operation = op_modify;
-    } else if (action == "delete") {
-      m_operation = op_delete;
-    } else {
-      throw payload_error{fmt::format("Unknown action {}, choices are create, modify, delete", action)};
+    auto op = parser.get<10>();
+    if (op < 1|| op > 3) {
+      throw payload_error{fmt::format("Unknown action value", op)};
     }
+    m_operation = static_cast<operation>(op);
   }
 
   void process_if_unused(ElementsParser &parser) {
 
     if (m_operation == operation::op_delete) {
       m_if_unused = false;
-      if (parser.parser<2>().isSet()) {
-        m_if_unused = parser.get<2>();
+      if (parser.parser<1>().isSet()) {
+        m_if_unused = parser.get<1>();
       }
     }
     else {
       m_if_unused = false;
-      if (parser.parser<2>().isSet()) {
-        throw payload_error{fmt::format("if-unused attribute is not allowed for {} action", parser.get<1>())};
+      if (parser.parser<1>().isSet()) {
+        throw payload_error{fmt::format("if-unused attribute is only allowed for delete action")};
       }
     }
   }
@@ -206,23 +242,23 @@ private:
 
   void process_node(ElementsParser& parser) {
 
-    if (parser.parser<9>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<3>())};
+    if (parser.parser<8>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<2>())};
     }
 
-    if (parser.parser<10>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<3>())};
+    if (parser.parser<9>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<2>())};
     }
 
     Node node;
     init_object(node, parser);
 
-    if (parser.parser<4>().isSet()) {
-      node.set_lat(parser.get<4>());
+    if (parser.parser<3>().isSet()) {
+      node.set_lat(parser.get<3>());
     }
 
-    if (parser.parser<5>().isSet()) {
-      node.set_lon(parser.get<5>());
+    if (parser.parser<4>().isSet()) {
+      node.set_lon(parser.get<4>());
     }
 
     process_tags(node, parser);
@@ -236,24 +272,24 @@ private:
 
   void process_way(ElementsParser& parser) {
 
+    if (parser.parser<3>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<2>())};
+    }
+
     if (parser.parser<4>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<3>())};
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<2>())};
     }
 
-    if (parser.parser<5>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<3>())};
-    }
-
-    if (parser.parser<10>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<3>())};
+    if (parser.parser<9>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<2>())};
     }
 
     Way way;
     init_object(way, parser);
 
     // adding way nodes
-    if (parser.parser<9>().isSet()) {
-      for (const auto& way_node_id : parser.get<9>()) {
+    if (parser.parser<8>().isSet()) {
+      for (const auto& way_node_id : parser.get<8>()) {
           way.add_way_node(way_node_id);
       }
     }
@@ -269,16 +305,16 @@ private:
 
   void process_relation(ElementsParser& parser) {
 
+    if (parser.parser<3>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<2>())};
+    }
+
     if (parser.parser<4>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<3>())};
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<2>())};
     }
 
-    if (parser.parser<5>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<3>())};
-    }
-
-    if (parser.parser<9>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<3>())};
+    if (parser.parser<8>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<2>())};
     }
 
     Relation relation;
@@ -303,11 +339,11 @@ private:
     if (m_operation == operation::op_delete)
       return;
 
-    if (!parser.parser<10>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has no relation member attribute", parser.get<0>(), parser.get<3>())};
+    if (!parser.parser<9>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has no relation member attribute", parser.get<0>(), parser.get<2>())};
     }
 
-    for (const auto& [type, ref, role] : parser.get<10>()) {
+    for (const auto& [type, ref, role] : parser.get<9>()) {
       RelationMember member;
       member.set_type(type);
       member.set_ref(ref);
@@ -322,8 +358,8 @@ private:
 
   void process_tags(OSMObject &o, ElementsParser& parser) const {
 
-    if (parser.parser<8>().isSet()) {
-      for (const auto &[key, value] : parser.get<8>()) {
+    if (parser.parser<7>().isSet()) {
+      for (const auto &[key, value] : parser.get<7>()) {
          o.add_tag(key, value);
       }
     }
@@ -332,16 +368,16 @@ private:
   void init_object(OSMObject &object, ElementsParser& parser) const {
 
     // id
-    object.set_id(parser.get<3>());
+    object.set_id(parser.get<2>());
 
     // version
-    if (parser.parser<6>().isSet()) {
-      object.set_version(parser.get<6>());
+    if (parser.parser<5>().isSet()) {
+      object.set_version(parser.get<5>());
     }
 
     // changeset
-    if (parser.parser<7>().isSet()) {
-      object.set_changeset(parser.get<7>());
+    if (parser.parser<6>().isSet()) {
+      object.set_changeset(parser.get<6>());
     }
 
     // TODO: not needed, handled by sjparser

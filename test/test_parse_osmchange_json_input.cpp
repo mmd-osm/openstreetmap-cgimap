@@ -171,7 +171,7 @@ TEST_CASE("osmchange: create invalid object", "[osmchange][json]") {
 // NODE TESTS
 
 TEST_CASE("Create empty node without details", "[osmchange][node][json]") {
-  REQUIRE_THROWS_AS(process_testmsg(R"({"osmChange": [{ "type": "node", "action": "create"}]})"), http::bad_request);
+  REQUIRE_THROWS_AS(process_testmsg(R"({"osmChange": {"create" : [{ "type": "node" }]}})"), http::bad_request);
 }
 
 TEST_CASE("Create node, details except changeset info missing", "[osmchange][node][json]") {
@@ -597,7 +597,7 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
       {
         "version": "0.6",
         "generator": "demo",
-        "osmChange": [  
+        "osmChange": [
      )";
 
   Test_Parser_Callback cb{};
@@ -775,20 +775,21 @@ TEST_CASE("Create node", "[osmchange][node][json]") {
       {
         "version": "0.6",
         "generator": "demo",
-        "osmChange": [
-          {
-            "type": "node",
-            "action": "create",
-            "id": -1,
-            "lat": 42.7957187,
-            "lon": 13.5690032,
-            "changeset": 124176968,
-            "tags": {
-              "man_made": "mast",
-              "name": "Monte Piselli - San Giacomo"
+        "osmChange": {
+          "create" : [
+            {
+              "type": "node",
+              "id": -1,
+              "lat": 42.7957187,
+              "lon": 13.5690032,
+              "changeset": 124176968,
+              "tags": {
+                "man_made": "mast",
+                "name": "Monte Piselli - San Giacomo"
+              }
             }
-          }
-        ]
+          ]
+       }
       }
     )", cb));
 }
@@ -844,24 +845,26 @@ TEST_CASE("Create relation", "[osmchange][relation][json]") {
       {
         "version": "0.6",
         "generator": "demo",
-        "osmChange": [
-          {
-            "type": "relation",
-            "action": "create",
-            "id": -1,
-            "changeset": 124176968,
-            "members": [
-                          {"type": "Node", "ref": -1, "role": "stop"},
-                          {"type": "Way", "ref": -2},
-                          {"type": "Relation", "ref": -3, "role": "parent"}
-                       ],
-            "tags": {
-              "ref": "123",
-              "route": "bus",
-              "ref": "23"
+        "osmChange": {
+          "create": [
+            {
+              "type": "relation",
+              "action": "create",
+              "id": -1,
+              "changeset": 124176968,
+              "members": [
+                            {"type": "Node", "ref": -1, "role": "stop"},
+                            {"type": "Way", "ref": -2},
+                            {"type": "Relation", "ref": -3, "role": "parent"}
+                        ],
+              "tags": {
+                "ref": "123",
+                "route": "bus",
+                "ref": "23"
+              }
             }
-          }
         ]
+        }
       }
     )", cb));
 }
