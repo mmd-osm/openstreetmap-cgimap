@@ -53,6 +53,8 @@ std::strong_ordering operator<=>(const element &a, const element &b) {
 
 struct sorting_formatter : public output_formatter {
 
+  sorting_formatter(mime::type mt) : mimetype(mt) {}
+
   ~sorting_formatter() override = default;
 
   // LCOV_EXCL_START
@@ -191,10 +193,63 @@ struct sorting_formatter : public output_formatter {
     throw std::runtime_error("Unexpected call to end_diffresult.");
   }
 
+  void start_osmchange() override {
+    // this shouldn't be called here
+    throw std::runtime_error("Unexpected call to start_osmchange.");
+  }
+
+  void end_osmchange() override {
+    // this shouldn't be called here
+    throw std::runtime_error("Unexpected call to end_osmchange.");
+  }
+
   // LCOV_EXCL_STOP
 
-  void write(output_formatter &fmt) {
-    std::sort(m_elements.begin(), m_elements.end());
+  void write_json(output_formatter &fmt) {
+    std::vector<element> out_create;
+    std::vector<element> out_modify;
+    std::vector<element> out_delete;
+
+    for (auto &e : m_elements) {
+      if (e.m_info.version == 1) {
+        out_create.emplace_back(e);
+      } else if (e.m_info.visible) {
+        out_modify.emplace_back(e);
+      } else {
+        out_delete.emplace_back(e);
+      }
+    }
+
+    fmt.start_osmchange();
+
+    if (!out_create.empty()) {
+      fmt.start_action(action_type::create);
+      for (const auto &e : out_create) {
+        write_element(e, fmt);
+      }
+      fmt.end_action(action_type::create);
+    }
+
+    if (!out_modify.empty()) {
+      fmt.start_action(action_type::modify);
+      for (const auto &e : out_modify) {
+        write_element(e, fmt);
+      }
+      fmt.end_action(action_type::modify);
+    }
+
+    if (!out_delete.empty()) {
+      fmt.start_action(action_type::del);
+      for (const auto &e : out_delete) {
+        write_element(e, fmt);
+      }
+      fmt.end_action(action_type::del);
+    }
+
+    fmt.end_osmchange();
+  }
+
+  void write_xml(output_formatter &fmt) {
     for (const auto &e : m_elements) {
       if (e.m_info.version == 1) {
         fmt.start_action(action_type::create);
@@ -214,8 +269,21 @@ struct sorting_formatter : public output_formatter {
     }
   }
 
+  void write(output_formatter &fmt) {
+    std::sort(m_elements.begin(), m_elements.end());
+
+    if (mimetype == mime::type::application_json) {
+      write_json(fmt);
+    }
+    else {
+      write_xml(fmt);
+    }
+  }
+
 private:
   std::vector<element> m_elements;
+
+  mime::type mimetype;
 
   void write_element(const element &e, output_formatter &fmt) {
     switch (e.m_type) {
@@ -242,7 +310,7 @@ osmchange_responder::osmchange_responder(mime::type mt, data_selection &s)
 }
 
 std::vector<mime::type> osmchange_responder::types_available() const {
-  return {mime::type::application_xml};
+  return {mime::type::application_xml, mime::type::application_json};
 }
 
 void osmchange_responder::write(output_formatter& fmt,
@@ -251,7 +319,7 @@ void osmchange_responder::write(output_formatter& fmt,
 
   fmt.start_document(generator, "osmChange");
   try {
-    sorting_formatter sorter;
+    sorting_formatter sorter(resource_type());
 
     sel.write_nodes(sorter);
     sel.write_ways(sorter);

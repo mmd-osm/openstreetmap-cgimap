@@ -66,6 +66,14 @@ void xml_formatter::end_diffresult() {
   // not needed in case of xml
 }
 
+void xml_formatter::start_osmchange() {
+  // not needed in case of xml
+}
+
+void xml_formatter::end_osmchange() {
+  // not needed in case of xml
+}
+
 
 void xml_formatter::start_action(action_type type) {
   writer->start(action_type_name(type));

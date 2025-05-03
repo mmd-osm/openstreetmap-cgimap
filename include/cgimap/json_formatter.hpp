@@ -44,6 +44,10 @@ public:
 
   void start_diffresult() override;
   void end_diffresult() override;
+
+  void start_osmchange() override;
+  void end_osmchange() override;
+
   void start_action(action_type type) override;
   void end_action(action_type type) override;
   void error(const std::exception &e) override;

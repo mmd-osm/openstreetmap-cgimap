@@ -2658,29 +2658,31 @@ TEST_CASE_METHOD( DatabaseTestsFixture, "test_osmchange_end_to_end", "[changeset
         {
           "version": "0.6",
           "generator": "demo",
-          "osmChange": [
-            {
-              "type": "node",
-              "action": "create",
-              "id": -1,
-              "lat": 42,
-              "lon": 13,
-              "changeset": 1
-            },
-            {
-              "type": "node",
-              "action": "modify",
-              "id": -1,
-              "version": 1,
-              "lat": 42.7957187,
-              "lon": 13.5690032,
-              "changeset": 1,
-              "tags": {
-                "man_made": "mast",
-                "name": "Monte Piselli - San Giacomo"
+          "osmChange": {
+            "create": [
+              {
+                "type": "node",
+                "id": -1,
+                "lat": 42,
+                "lon": 13,
+                "changeset": 1
               }
-            }
-          ]
+            ],
+            "modify": [
+              {
+                "type": "node",
+                "id": -1,
+                "version": 1,
+                "lat": 42.7957187,
+                "lon": 13.5690032,
+                "changeset": 1,
+                "tags": {
+                  "man_made": "mast",
+                  "name": "Monte Piselli - San Giacomo"
+                }
+              }
+            ]
+          }
         }
       )";
 

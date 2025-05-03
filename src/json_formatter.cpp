@@ -84,6 +84,14 @@ void json_formatter::end_changeset(bool multi_selection) {
   }
 }
 
+void json_formatter::start_osmchange() {
+  writer->object_key("osmChange");
+  writer->start_object();
+}
+
+void json_formatter::end_osmchange() {
+  writer->end_object();
+}
 
 void json_formatter::end_document() {
   writer->end_object();
@@ -100,9 +108,12 @@ void json_formatter::end_diffresult() {
 }
 
 void json_formatter::start_action(action_type type) {
+  writer->object_key(action_type_name(type));
+  writer->start_array();
 }
 
 void json_formatter::end_action(action_type type) {
+  writer->end_array();
 }
 
 void json_formatter::error(const std::exception &e) {
