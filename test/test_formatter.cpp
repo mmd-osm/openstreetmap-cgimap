@@ -115,6 +115,12 @@ void test_formatter::start_changeset(bool) {
 void test_formatter::end_changeset(bool) {
 }
 
+void test_formatter::start_osmchange() {
+}
+
+void test_formatter::end_osmchange() {
+}
+
 void test_formatter::start_action(action_type type) {
 }
 

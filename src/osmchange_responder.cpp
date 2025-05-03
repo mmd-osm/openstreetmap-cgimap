@@ -53,6 +53,8 @@ std::strong_ordering operator<=>(const element &a, const element &b) {
 
 struct sorting_formatter : public output_formatter {
 
+  sorting_formatter(mime::type mt) : mimetype(mt) {}
+
   ~sorting_formatter() override = default;
 
   // LCOV_EXCL_START
@@ -191,10 +193,56 @@ struct sorting_formatter : public output_formatter {
     throw std::runtime_error("Unexpected call to end_diffresult.");
   }
 
+  void start_osmchange() override {
+    // this shouldn't be called here
+    throw std::runtime_error("Unexpected call to start_osmchange.");
+  }
+
+  void end_osmchange() override {
+    // this shouldn't be called here
+    throw std::runtime_error("Unexpected call to end_osmchange.");
+  }
+
   // LCOV_EXCL_STOP
 
-  void write(output_formatter &fmt) {
-    std::sort(m_elements.begin(), m_elements.end());
+  void write_json(output_formatter &fmt) {
+
+    fmt.start_osmchange();
+
+    std::optional<action_type> current_action;
+
+    for (const auto &e : m_elements) {
+      using enum action_type;
+      action_type new_action{};
+
+      if (e.m_info.version == 1) {
+        new_action = create;
+      } else if (e.m_info.visible) {
+        new_action = modify;
+      } else {
+        new_action = del;
+      }
+
+      if (!current_action || *current_action != new_action) {
+        if (current_action) {
+          fmt.end_element();
+        }
+        fmt.start_action(new_action);
+        fmt.start_element();
+        current_action = new_action;
+      }
+
+      write_element(e, fmt);
+    }
+
+    if (current_action) {
+      fmt.end_element();
+    }
+
+    fmt.end_osmchange();
+  }
+
+  void write_xml(output_formatter &fmt) {
     for (const auto &e : m_elements) {
       if (e.m_info.version == 1) {
         fmt.start_action(action_type::create);
@@ -214,8 +262,21 @@ struct sorting_formatter : public output_formatter {
     }
   }
 
+  void write(output_formatter &fmt) {
+    std::sort(m_elements.begin(), m_elements.end());
+
+    if (mimetype == mime::type::application_json) {
+      write_json(fmt);
+    }
+    else {
+      write_xml(fmt);
+    }
+  }
+
 private:
   std::vector<element> m_elements;
+
+  mime::type mimetype;
 
   void write_element(const element &e, output_formatter &fmt) {
     switch (e.m_type) {
@@ -242,7 +303,7 @@ osmchange_responder::osmchange_responder(mime::type mt, data_selection &s)
 }
 
 std::vector<mime::type> osmchange_responder::types_available() const {
-  return {mime::type::application_xml};
+  return {mime::type::application_xml, mime::type::application_json};
 }
 
 void osmchange_responder::write(output_formatter& fmt,
@@ -251,7 +312,7 @@ void osmchange_responder::write(output_formatter& fmt,
 
   fmt.start_document(generator, "osmChange");
   try {
-    sorting_formatter sorter;
+    sorting_formatter sorter(resource_type());
 
     sel.write_nodes(sorter);
     sel.write_ways(sorter);

@@ -53,6 +53,14 @@ void text_formatter::end_diffresult() {
   // nothing needed here
 }
 
+void text_formatter::start_osmchange() {
+  // nothing needed here
+}
+
+void text_formatter::end_osmchange() {
+  // nothing needed here
+}
+
 
 void text_formatter::start_action(action_type type) {
   // nothing needed here

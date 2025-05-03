@@ -99,6 +99,8 @@ struct test_formatter : public output_formatter {
   void end_element() override;
   void start_changeset(bool) override;
   void end_changeset(bool) override;
+  void start_osmchange() override;
+  void end_osmchange() override;
   void start_action(action_type type) override;
   void end_action(action_type type) override;
   void write_node(const element_info &elem, double lon, double lat,

@@ -229,6 +229,9 @@ struct output_formatter {
 
   virtual void end_diffresult() = 0;
 
+  virtual void start_osmchange() = 0;
+  virtual void end_osmchange() = 0;
+
   // TODO: document me.
   virtual void start_action(action_type type) = 0;
   virtual void end_action(action_type type) = 0;

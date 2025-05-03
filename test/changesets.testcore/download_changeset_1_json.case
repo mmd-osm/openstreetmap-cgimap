@@ -1,0 +1,34 @@
+Request-Method: GET
+Request-URI: /api/0.6/changeset/1/download.json
+Date: 2017-02-20T15:22:00Z
+---
+Status: 200 OK
+Content-Type: application/json; charset=utf-8
+!Content-Disposition:
+---
+{ "version": "0.6",
+  "generator": "***",
+  "copyright": "***",
+  "attribution": "***",
+  "license": "***",
+  "osmChange": [
+    {
+      "action": "create",
+      "elements":
+      	[
+		{
+  		"type":"node",
+		"id":1,
+		"lat":0.0000000,
+		"lon":0.0000000,
+		"timestamp": "2015-08-09T10:33:13Z",
+		"version":1,
+		"changeset":1,
+		"user": "FakeUser1",
+		"uid":1
+		}
+	]
+    }
+  ]
+}
+
