@@ -86,7 +86,6 @@ class OSMChangeJSONParserFormat {
     return Object{
           std::tuple{
             Member{"type", Value<std::string>{}},
-            Member{"if-unused", Value<bool>{}, Optional, false},
             Member{"id", Value<int64_t>{}},
             Member{"lat", Value<double>{}, Optional},
             Member{"lon", Value<double>{}, Optional},
@@ -97,6 +96,7 @@ class OSMChangeJSONParserFormat {
             Member{"members", SArray{getMemberParser()}, Optional},
              // internal property to set the action (create/modify/delete), payload value is ignored
             Member{"_action_", FixedValue{op}, Optional},
+            Member{"if-unused", Value<bool>{}, Optional, false}
           },
         ObjectOptions{Reaction::Ignore},
         element_parser_callback};
@@ -175,7 +175,7 @@ private:
                     std::bind_front(&api06::OSMChangeJSONParser::check_version_callback, this),
                     std::bind_front(&api06::OSMChangeJSONParser::process_element, this))};
 
-  bool check_version_callback(const std::string& version) const {
+  [[nodiscard]] bool check_version_callback(const std::string& version) const {
 
     if (version != "0.6") {
       throw payload_error{fmt::format(R"(Unsupported version "{}", expecting "0.6")", version)};
@@ -202,7 +202,7 @@ private:
 
   void process_action(ElementsParser &parser) {
 
-    auto op = parser.get<10>();
+    auto op = parser.get<9>();
     if (op < 1|| op > 3) {
       throw payload_error{fmt::format("Unknown action value", op)};
     }
@@ -213,13 +213,13 @@ private:
 
     if (m_operation == operation::op_delete) {
       m_if_unused = false;
-      if (parser.parser<1>().isSet()) {
-        m_if_unused = parser.get<1>();
+      if (parser.parser<10>().isSet()) {
+        m_if_unused = parser.get<10>();
       }
     }
     else {
       m_if_unused = false;
-      if (parser.parser<1>().isSet()) {
+      if (parser.parser<10>().isSet()) {
         throw payload_error{fmt::format("if-unused attribute is only allowed for delete action")};
       }
     }
@@ -242,23 +242,23 @@ private:
 
   void process_node(ElementsParser& parser) {
 
-    if (parser.parser<8>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<2>())};
+    if (parser.parser<7>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<1>())};
     }
 
-    if (parser.parser<9>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<2>())};
+    if (parser.parser<8>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<1>())};
     }
 
     Node node;
     init_object(node, parser);
 
-    if (parser.parser<3>().isSet()) {
-      node.set_lat(parser.get<3>());
+    if (parser.parser<2>().isSet()) {
+      node.set_lat(parser.get<2>());
     }
 
-    if (parser.parser<4>().isSet()) {
-      node.set_lon(parser.get<4>());
+    if (parser.parser<3>().isSet()) {
+      node.set_lon(parser.get<3>());
     }
 
     process_tags(node, parser);
@@ -272,24 +272,24 @@ private:
 
   void process_way(ElementsParser& parser) {
 
+    if (parser.parser<2>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<1>())};
+    }
+
     if (parser.parser<3>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<2>())};
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<1>())};
     }
 
-    if (parser.parser<4>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<2>())};
-    }
-
-    if (parser.parser<9>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<2>())};
+    if (parser.parser<8>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<1>())};
     }
 
     Way way;
     init_object(way, parser);
 
     // adding way nodes
-    if (parser.parser<8>().isSet()) {
-      for (const auto& way_node_id : parser.get<8>()) {
+    if (parser.parser<7>().isSet()) {
+      for (const auto& way_node_id : parser.get<7>()) {
           way.add_way_node(way_node_id);
       }
     }
@@ -305,16 +305,16 @@ private:
 
   void process_relation(ElementsParser& parser) {
 
+    if (parser.parser<2>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<1>())};
+    }
+
     if (parser.parser<3>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<2>())};
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<1>())};
     }
 
-    if (parser.parser<4>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<2>())};
-    }
-
-    if (parser.parser<8>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<2>())};
+    if (parser.parser<7>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<1>())};
     }
 
     Relation relation;
@@ -339,11 +339,11 @@ private:
     if (m_operation == operation::op_delete)
       return;
 
-    if (!parser.parser<9>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has no relation member attribute", parser.get<0>(), parser.get<2>())};
+    if (!parser.parser<8>().isSet()) {
+      throw payload_error{fmt::format("Element {}/{:d} has no relation member attribute", parser.get<0>(), parser.get<1>())};
     }
 
-    for (const auto& [type, ref, role] : parser.get<9>()) {
+    for (const auto& [type, ref, role] : parser.get<8>()) {
       RelationMember member;
       member.set_type(type);
       member.set_ref(ref);
@@ -358,8 +358,8 @@ private:
 
   void process_tags(OSMObject &o, ElementsParser& parser) const {
 
-    if (parser.parser<7>().isSet()) {
-      for (const auto &[key, value] : parser.get<7>()) {
+    if (parser.parser<6>().isSet()) {
+      for (const auto &[key, value] : parser.get<6>()) {
          o.add_tag(key, value);
       }
     }
@@ -368,26 +368,15 @@ private:
   void init_object(OSMObject &object, ElementsParser& parser) const {
 
     // id
-    object.set_id(parser.get<2>());
+    object.set_id(parser.get<1>());
 
     // version
-    if (parser.parser<5>().isSet()) {
-      object.set_version(parser.get<5>());
+    if (parser.parser<4>().isSet()) {
+      object.set_version(parser.get<4>());
     }
 
     // changeset
-    if (parser.parser<6>().isSet()) {
-      object.set_changeset(parser.get<6>());
-    }
-
-    // TODO: not needed, handled by sjparser
-    if (!object.has_id()) {
-     	throw payload_error{ "Mandatory field id missing in object" };
-    }
-
-    if (!object.has_changeset()) {
-      throw payload_error{fmt::format("Changeset id is missing for {}", object.to_string()) };
-    }
+    object.set_changeset(parser.get<5>());
 
     if (m_operation == operation::op_create) {
       // we always override version number for create operations (they are not
