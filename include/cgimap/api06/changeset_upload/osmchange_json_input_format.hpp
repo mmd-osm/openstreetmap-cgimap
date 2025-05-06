@@ -38,6 +38,7 @@ using SJParser::SArray;
 using SJParser::SAutoObject;
 using SJParser::SMap;
 using SJParser::Value;
+using SJParser::OptionalValue;
 using SJParser::Reaction;
 using SJParser::ObjectOptions;
 using SJParser::Presence::Optional;
@@ -72,9 +73,24 @@ public:
 
 class OSMChangeJSONParserFormat {
 
+  [[nodiscard]] static bool validateType(const std::string &type) {
+    if (type != "node" && type != "way" && type != "relation") {
+      throw payload_error{fmt::format("Unknown element {}, expecting node, way or relation", type)};
+    }
+    return true;
+  }
+
+  [[nodiscard]] static bool check_version_callback(const std::string& version) {
+
+    if (version != "0.6") {
+      throw payload_error{fmt::format(R"(Unsupported version "{}", expecting "0.6")", version)};
+    }
+    return true;
+  }
+
   static auto getMemberParser() {
 
-    return SAutoObject{std::tuple{Member{"type", Value<std::string>{}},
+    return SAutoObject{std::tuple{Member{"type", Value<std::string>{validateType}},
                                   Member{"ref", Value<int64_t>{}},
                                   Member{"role", Value<std::string>{}, Optional, ""}},
                                   ObjectOptions{Reaction::Ignore}
@@ -85,9 +101,9 @@ class OSMChangeJSONParserFormat {
   static auto getElementsParser(operation op, ElementParserCallback element_parser_callback = nullptr) {
     return Object{
           std::tuple{
-            Member{"type", Value<std::string>{}},
+            Member{"type", Value<std::string>{validateType}},
             Member{"id", Value<int64_t>{}},
-            Member{"lat", Value<double>{}, Optional},
+            Member{"lat", OptionalValue<double>{}, Optional},
             Member{"lon", Value<double>{}, Optional},
             Member{"version", Value<int64_t>{}, Optional},
             Member{"changeset", Value<int64_t>{}},
@@ -115,10 +131,8 @@ class OSMChangeJSONParserFormat {
         };
   }
 
-  template <typename ElementParserCallback = std::nullptr_t,
-            typename CheckVersionCallback = std::nullptr_t>
-  static auto getMainParser(CheckVersionCallback check_version_callback = nullptr,
-                            ElementParserCallback element_parser_callback = nullptr) {
+  template <typename ElementParserCallback = std::nullptr_t>
+  static auto getMainParser(ElementParserCallback element_parser_callback = nullptr) {
     return Parser{
        Object{
         std::tuple{
@@ -172,16 +186,7 @@ private:
   using MainParser = decltype(api06::OSMChangeJSONParserFormat::getMainParser());
 
   MainParser _parser{api06::OSMChangeJSONParserFormat::getMainParser(
-                    std::bind_front(&api06::OSMChangeJSONParser::check_version_callback, this),
-                    std::bind_front(&api06::OSMChangeJSONParser::process_element, this))};
-
-  [[nodiscard]] bool check_version_callback(const std::string& version) const {
-
-    if (version != "0.6") {
-      throw payload_error{fmt::format(R"(Unsupported version "{}", expecting "0.6")", version)};
-    }
-    return true;
-  }
+                     std::bind_front(&api06::OSMChangeJSONParser::process_element, this))};
 
   // OSM element callback
   bool process_element(ElementsParser &parser) {
@@ -253,8 +258,9 @@ private:
     Node node;
     init_object(node, parser);
 
-    if (parser.parser<2>().isSet()) {
-      node.set_lat(parser.get<2>());
+    // read optional value
+    if (parser.get<2>().has_value()) {
+      node.set_lat(parser.get<2>().value());
     }
 
     if (parser.parser<3>().isSet()) {

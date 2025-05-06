@@ -854,9 +854,9 @@ TEST_CASE("Create relation", "[osmchange][relation][json]") {
               "id": -1,
               "changeset": 124176968,
               "members": [
-                            {"type": "Node", "ref": -1, "role": "stop"},
-                            {"type": "Way", "ref": -2},
-                            {"type": "Relation", "ref": -3, "role": "parent"}
+                            {"type": "node", "ref": -1, "role": "stop"},
+                            {"type": "way", "ref": -2},
+                            {"type": "relation", "ref": -3, "role": "parent"}
                         ],
               "tags": {
                 "ref": "123",
