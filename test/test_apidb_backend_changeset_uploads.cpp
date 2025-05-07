@@ -2658,8 +2658,10 @@ TEST_CASE_METHOD( DatabaseTestsFixture, "test_osmchange_end_to_end", "[changeset
         {
           "version": "0.6",
           "generator": "demo",
-          "osmChange": {
-            "create": [
+          "osmChange": [
+           {
+            "action": "create",
+            "elements": [
               {
                 "type": "node",
                 "id": -1,
@@ -2667,8 +2669,11 @@ TEST_CASE_METHOD( DatabaseTestsFixture, "test_osmchange_end_to_end", "[changeset
                 "lon": 13,
                 "changeset": 1
               }
-            ],
-            "modify": [
+            ]
+          },
+          {
+            "action": "modify",
+            "elements": [
               {
                 "type": "node",
                 "id": -1,
@@ -2682,7 +2687,8 @@ TEST_CASE_METHOD( DatabaseTestsFixture, "test_osmchange_end_to_end", "[changeset
                 }
               }
             ]
-          }
+           }
+          ]
         }
       )";
 

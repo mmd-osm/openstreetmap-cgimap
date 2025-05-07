@@ -775,8 +775,10 @@ TEST_CASE("Create node", "[osmchange][node][json]") {
       {
         "version": "0.6",
         "generator": "demo",
-        "osmChange": {
-          "create" : [
+        "osmChange": [
+         {
+          "action": "create",
+          "elements" : [
             {
               "type": "node",
               "id": -1,
@@ -789,8 +791,9 @@ TEST_CASE("Create node", "[osmchange][node][json]") {
               }
             }
           ]
-       }
-      }
+         }
+       ]
+     }
     )", cb));
 }
 
@@ -811,8 +814,10 @@ TEST_CASE("Create way", "[osmchange][way][json]") {
       {
         "version": "0.6",
         "generator": "demo",
-        "osmChange": {
-          "create": [
+        "osmChange": [
+         {
+          "action": "create",
+          "elements" : [
             {
               "type": "way",
               "id": -1,
@@ -825,6 +830,7 @@ TEST_CASE("Create way", "[osmchange][way][json]") {
             }
           ]
         }
+       ]
       }
     )", cb));
 }
@@ -846,8 +852,10 @@ TEST_CASE("Create relation", "[osmchange][relation][json]") {
       {
         "version": "0.6",
         "generator": "demo",
-        "osmChange": {
-          "create": [
+        "osmChange": [
+         {
+          "action": "create",
+          "elements" : [
             {
               "type": "relation",
               "action": "create",
@@ -864,8 +872,9 @@ TEST_CASE("Create relation", "[osmchange][relation][json]") {
                 "ref": "23"
               }
             }
-        ]
+          ]
         }
+       ]
       }
     )", cb));
 }

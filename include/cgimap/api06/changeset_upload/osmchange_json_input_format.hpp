@@ -80,6 +80,13 @@ class OSMChangeJSONParserFormat {
     return true;
   }
 
+  [[nodiscard]] static bool validateAction(const std::string &action) {
+    if (action != "create" && action != "modify" && action != "delete") {
+      throw payload_error{fmt::format("Unknown action {}, expecting create, modify or delete", action)};
+    }
+    return true;
+  }
+
   [[nodiscard]] static bool check_version_callback(const std::string& version) {
 
     if (version != "0.6") {
@@ -97,48 +104,45 @@ class OSMChangeJSONParserFormat {
                                   };
   }
 
-  template <typename ElementParserCallback = std::nullptr_t>
-  static auto getElementsParser(operation op, ElementParserCallback element_parser_callback = nullptr) {
-    return Object{
+  static auto getElementsParser() {
+    return SAutoObject{
           std::tuple{
             Member{"type", Value<std::string>{validateType}},
             Member{"id", Value<int64_t>{}},
-            Member{"lat", OptionalValue<double>{}, Optional},
-            Member{"lon", Value<double>{}, Optional},
-            Member{"version", Value<int64_t>{}, Optional},
+            Member{"lat", OptionalValue<double>{}, Optional, std::optional<double>{}},
+            Member{"lon", OptionalValue<double>{}, Optional, std::optional<double>{}},
+            Member{"version", OptionalValue<int64_t>{}, Optional, std::optional<int64_t>{}},
             Member{"changeset", Value<int64_t>{}},
-            Member{"tags", SMap{Value<std::string>{}}, Optional},
-            Member{"nodes", SArray{Value<int64_t>{}}, Optional},
-            Member{"members", SArray{getMemberParser()}, Optional},
-             // internal property to set the action (create/modify/delete), payload value is ignored
-            Member{"_action_", FixedValue{op}, Optional},
-            Member{"if-unused", Value<bool>{}, Optional, false}
+            Member{"tags", SMap{Value<std::string>{}}, Optional, std::map<std::string, std::string>{}},
+            Member{"nodes", SArray{Value<int64_t>{}}, Optional, std::vector<int64_t>{}},
+            Member{"members", SArray{getMemberParser()}, Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
           },
-        ObjectOptions{Reaction::Ignore},
-        element_parser_callback};
+        ObjectOptions{Reaction::Ignore}
+      };
   }
 
-  template <typename ElementParserCallback = std::nullptr_t>
-  static auto getOsmChangeParser(ElementParserCallback element_parser_callback = nullptr) {
+  template <typename ActionElementsParserCallback = std::nullptr_t>
+  static auto getActionElementsParser(ActionElementsParserCallback action_elements_parser_callback = nullptr) {
     using enum operation;
     return Object{
           std::tuple{
-            Member{"create", Array{getElementsParser(op_create, element_parser_callback)}, Optional},
-            Member{"modify", Array{getElementsParser(op_modify, element_parser_callback)}, Optional},
-            Member{"delete", Array{getElementsParser(op_delete, element_parser_callback)}, Optional}
+            Member{"action", Value<std::string>{validateAction}},
+            Member{"elements", SArray{getElementsParser()}},
+            Member{"if-unused", Value<bool>{}, Optional},
           },
-        ObjectOptions{Reaction::Ignore}
+        ObjectOptions{Reaction::Ignore},
+        action_elements_parser_callback
         };
   }
 
-  template <typename ElementParserCallback = std::nullptr_t>
-  static auto getMainParser(ElementParserCallback element_parser_callback = nullptr) {
+  template <typename ActionElementsParserCallback = std::nullptr_t>
+  static auto getMainParser(ActionElementsParserCallback action_elements_parser_callback = nullptr) {
     return Parser{
        Object{
         std::tuple{
           Member{"version", Value<std::string>{check_version_callback}},
           Member{"generator", Value<std::string>{}, Optional},
-          Member{"osmChange", getOsmChangeParser(element_parser_callback)}
+          Member{"osmChange", Array{getActionElementsParser(action_elements_parser_callback)}}
         },
         ObjectOptions{Reaction::Ignore}
       }};
@@ -182,16 +186,14 @@ public:
 
 private:
 
-  using ElementsParser = decltype(api06::OSMChangeJSONParserFormat::getElementsParser(operation::op_undefined));
+  using ActionElementsParser = decltype(api06::OSMChangeJSONParserFormat::getActionElementsParser());
   using MainParser = decltype(api06::OSMChangeJSONParserFormat::getMainParser());
 
   MainParser _parser{api06::OSMChangeJSONParserFormat::getMainParser(
-                     std::bind_front(&api06::OSMChangeJSONParser::process_element, this))};
+                     std::bind_front(&api06::OSMChangeJSONParser::process_action_elements, this))};
 
   // OSM element callback
-  bool process_element(ElementsParser &parser) {
-
-    element_count++;
+  bool process_action_elements(ActionElementsParser &parser) {
 
     // process action
     process_action(parser);
@@ -200,74 +202,83 @@ private:
     process_if_unused(parser);
 
     // process type (node, way, relation)
-    process_type(parser);
+    process_elements(parser);
 
     return true;
   }
 
-  void process_action(ElementsParser &parser) {
+  void process_action(ActionElementsParser &parser) {
 
-    auto op = parser.get<9>();
-    if (op < 1|| op > 3) {
-      throw payload_error{fmt::format("Unknown action value", op)};
+    using enum operation;
+    auto & action = parser.get<0>();
+    if (action == "create") {
+      m_operation = op_create;
+    } else if (action == "modify") {
+      m_operation = op_modify;
+    } else if (action == "delete") {
+      m_operation = op_delete;
     }
-    m_operation = static_cast<operation>(op);
   }
 
-  void process_if_unused(ElementsParser &parser) {
+  void process_if_unused(ActionElementsParser &parser) {
+    m_if_unused = false;
 
     if (m_operation == operation::op_delete) {
-      m_if_unused = false;
-      if (parser.parser<10>().isSet()) {
-        m_if_unused = parser.get<10>();
+      if (parser.parser<2>().isSet()) {
+        m_if_unused = parser.get<2>();
       }
     }
     else {
-      m_if_unused = false;
-      if (parser.parser<10>().isSet()) {
+      if (parser.parser<2>().isSet()) {
         throw payload_error{fmt::format("if-unused attribute is only allowed for delete action")};
       }
     }
   }
 
-  void process_type(ElementsParser &parser) {
+  void process_elements(ActionElementsParser &parser) {
 
-    const std::string& type = parser.get<0>();
-
-    if (type == "node") {
-      process_node(parser);
-    } else if (type == "way") {
-      process_way(parser);
-    } else if (type == "relation") {
-      process_relation(parser);
-    } else {
-      throw payload_error{fmt::format("Unknown element {}, expecting node, way or relation", type)};
+    for (const auto& element : parser.get<1>()) {
+      element_count++;
+      process_type(element);
     }
   }
 
-  void process_node(ElementsParser& parser) {
+  void process_type(auto& element) {
 
-    if (parser.parser<7>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<1>())};
+    auto& type = std::get<0>(element);
+
+    if (type == "node") {
+      process_node(element);
+    } else if (type == "way") {
+      process_way(element);
+    } else if (type == "relation") {
+      process_relation(element);
+    }
+  }
+
+  void process_node(auto& element) {
+
+    if (!std::get<7>(element).empty()) {
+      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", std::get<0>(element), std::get<1>(element))};
     }
 
-    if (parser.parser<8>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<1>())};
+    if (!std::get<8>(element).empty()) {
+      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", std::get<0>(element), std::get<1>(element))};
     }
 
     Node node;
-    init_object(node, parser);
+    init_object(node, element);
 
     // read optional value
-    if (parser.get<2>().has_value()) {
-      node.set_lat(parser.get<2>().value());
+    if (std::get<2>(element).has_value()) {
+      node.set_lat(std::get<2>(element).value());
     }
 
-    if (parser.parser<3>().isSet()) {
-      node.set_lon(parser.get<3>());
+    if (std::get<3>(element).has_value()) {
+      node.set_lon(std::get<3>(element).value());
     }
 
-    process_tags(node, parser);
+    process_tags(node, element);
 
     if (!node.is_valid(m_operation)) {
       throw payload_error{fmt::format("{} does not include all mandatory fields", node.to_string())};
@@ -276,31 +287,29 @@ private:
     m_callback.process_node(node, m_operation, m_if_unused);
   }
 
-  void process_way(ElementsParser& parser) {
+  void process_way(auto& element) {
 
-    if (parser.parser<2>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<1>())};
+    if (std::get<2>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", std::get<0>(element), std::get<1>(element))};
     }
 
-    if (parser.parser<3>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<1>())};
+    if (std::get<3>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", std::get<0>(element), std::get<1>(element))};
     }
 
-    if (parser.parser<8>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", parser.get<0>(), parser.get<1>())};
+    if (!std::get<8>(element).empty()) {
+      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", std::get<0>(element), std::get<1>(element))};
     }
 
     Way way;
-    init_object(way, parser);
+    init_object(way, element);
 
     // adding way nodes
-    if (parser.parser<7>().isSet()) {
-      for (const auto& way_node_id : parser.get<7>()) {
-          way.add_way_node(way_node_id);
-      }
+    for (const auto& way_node_id : std::get<7>(element)) {
+        way.add_way_node(way_node_id);
     }
 
-    process_tags(way, parser);
+    process_tags(way, element);
 
     if (!way.is_valid(m_operation)) {
       throw payload_error{fmt::format("{} does not include all mandatory fields", way.to_string())};
@@ -309,26 +318,26 @@ private:
     m_callback.process_way(way, m_operation, m_if_unused);
   }
 
-  void process_relation(ElementsParser& parser) {
+  void process_relation(auto& element) {
 
-    if (parser.parser<2>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", parser.get<0>(), parser.get<1>())};
+    if (std::get<2>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", std::get<0>(element), std::get<1>(element))};
     }
 
-    if (parser.parser<3>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", parser.get<0>(), parser.get<1>())};
+    if (std::get<3>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", std::get<0>(element), std::get<1>(element))};
     }
 
-    if (parser.parser<7>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", parser.get<0>(), parser.get<1>())};
+    if (!std::get<7>(element).empty()) {
+      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", std::get<0>(element), std::get<1>(element))};
     }
 
     Relation relation;
-    init_object(relation, parser);
+    init_object(relation, element);
 
-    process_relation_members(relation, parser);
+    process_relation_members(relation, element);
 
-    process_tags(relation, parser);
+    process_tags(relation, element);
 
     if (!relation.is_valid(m_operation)) {
       throw payload_error{fmt::format("{} does not include all mandatory fields", relation.to_string())};
@@ -337,19 +346,19 @@ private:
     m_callback.process_relation(relation, m_operation, m_if_unused);
   }
 
-  void process_relation_members(Relation &relation, ElementsParser& parser) const {
+  void process_relation_members(Relation &relation, auto& element) const {
 
     // relation member attribute is mandatory for create and modify operations.
     // Its value can be an empty array, though. Delete operations don't require
     // this attribute.
     if (m_operation == operation::op_delete)
       return;
-
+/*
     if (!parser.parser<8>().isSet()) {
       throw payload_error{fmt::format("Element {}/{:d} has no relation member attribute", parser.get<0>(), parser.get<1>())};
     }
-
-    for (const auto& [type, ref, role] : parser.get<8>()) {
+*/
+    for (const auto& [type, ref, role] : std::get<8>(element)) {
       RelationMember member;
       member.set_type(type);
       member.set_ref(ref);
@@ -362,27 +371,25 @@ private:
     }
   }
 
-  void process_tags(OSMObject &o, ElementsParser& parser) const {
+  void process_tags(OSMObject &o, auto& element) const {
 
-    if (parser.parser<6>().isSet()) {
-      for (const auto &[key, value] : parser.get<6>()) {
-         o.add_tag(key, value);
-      }
+    for (const auto &[key, value] : std::get<6>(element)) {
+        o.add_tag(key, value);
     }
   }
 
-  void init_object(OSMObject &object, ElementsParser& parser) const {
+  void init_object(OSMObject &object, auto& element) const {
 
     // id
-    object.set_id(parser.get<1>());
+    object.set_id(std::get<1>(element));
 
     // version
-    if (parser.parser<4>().isSet()) {
-      object.set_version(parser.get<4>());
+    if (std::get<4>(element).has_value()) {
+      object.set_version(std::get<4>(element).value());
     }
 
     // changeset
-    object.set_changeset(parser.get<5>());
+    object.set_changeset(std::get<5>(element));
 
     if (m_operation == operation::op_create) {
       // we always override version number for create operations (they are not
