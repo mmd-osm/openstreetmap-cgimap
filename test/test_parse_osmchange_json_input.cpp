@@ -858,7 +858,6 @@ TEST_CASE("Create relation", "[osmchange][relation][json]") {
           "elements" : [
             {
               "type": "relation",
-              "action": "create",
               "id": -1,
               "changeset": 124176968,
               "members": [
