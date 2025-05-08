@@ -99,8 +99,7 @@ class OSMChangeJSONParserFormat {
 
     return SAutoObject{std::tuple{Member{"type", Value<std::string>{validateType}},
                                   Member{"ref", Value<int64_t>{}},
-                                  Member{"role", Value<std::string>{}, Optional, ""}},
-                                  ObjectOptions{Reaction::Ignore}
+                                  Member{"role", Value<std::string>{}, Optional, ""}}
                                   };
   }
 
@@ -116,8 +115,7 @@ class OSMChangeJSONParserFormat {
             Member{"tags", SMap{Value<std::string>{}}, Optional, std::map<std::string, std::string>{}},
             Member{"nodes", SArray{Value<int64_t>{}}, Optional, std::vector<int64_t>{}},
             Member{"members", SArray{getMemberParser()}, Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
-          },
-        ObjectOptions{Reaction::Ignore}
+          }
       };
   }
 
@@ -353,11 +351,7 @@ private:
     // this attribute.
     if (m_operation == operation::op_delete)
       return;
-/*
-    if (!parser.parser<8>().isSet()) {
-      throw payload_error{fmt::format("Element {}/{:d} has no relation member attribute", parser.get<0>(), parser.get<1>())};
-    }
-*/
+
     for (const auto& [type, ref, role] : std::get<8>(element)) {
       RelationMember member;
       member.set_type(type);
