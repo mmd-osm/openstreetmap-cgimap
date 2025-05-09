@@ -45,32 +45,6 @@ using SJParser::Presence::Optional;
 using SJParser::Ignore;
 
 
-// FixedValue allows to set a fixed value for a member
-// and ignore the value in the payload
-template <typename T>
-class FixedValue : public Ignore {
-public:
-  using ValueType = std::conditional_t<std::is_enum_v<T>, std::underlying_type_t<T>, T>;
-
-  FixedValue() = default;
-
-  explicit FixedValue(T value) : _value{ static_cast<ValueType>(value) } {
-    setNotEmpty();
-  }
-
-  [[nodiscard]] const ValueType &get() const {
-    return _value;
-  }
-
-  [[nodiscard]] ValueType &&pop() {
-    unset();
-    return std::move(_value);
-  }
-
-  private:
-    ValueType _value{};
-};
-
 class OSMChangeJSONParserFormat {
 
   [[nodiscard]] static bool validateType(const std::string &type) {
