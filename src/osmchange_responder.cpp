@@ -312,7 +312,7 @@ void osmchange_responder::write(output_formatter& fmt,
 
   fmt.start_document(generator, "osmChange");
   try {
-    sorting_formatter sorter(resource_type());
+    sorting_formatter sorter(fmt.mime_type());
 
     sel.write_nodes(sorter);
     sel.write_ways(sorter);
