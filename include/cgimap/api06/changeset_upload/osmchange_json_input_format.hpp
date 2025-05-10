@@ -230,15 +230,36 @@ private:
     }
   }
 
-  void process_node(auto& element) {
+  void check_no_lat_lon(auto& element) const {
+
+    if (std::get<2>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", std::get<0>(element), std::get<1>(element))};
+    }
+
+    if (std::get<3>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", std::get<0>(element), std::get<1>(element))};
+    }
+  }
+
+  void check_no_way_nodes(auto& element) const {
 
     if (!std::get<7>(element).empty()) {
       throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", std::get<0>(element), std::get<1>(element))};
     }
+  }
+
+  void check_no_rel_members(auto& element) const {
 
     if (!std::get<8>(element).empty()) {
       throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", std::get<0>(element), std::get<1>(element))};
     }
+  }
+
+  void process_node(auto& element) {
+
+    check_no_way_nodes(element);
+    check_no_rel_members(element);
+
 
     Node node;
     init_object(node, element);
@@ -263,17 +284,8 @@ private:
 
   void process_way(auto& element) {
 
-    if (std::get<2>(element).has_value()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", std::get<0>(element), std::get<1>(element))};
-    }
-
-    if (std::get<3>(element).has_value()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", std::get<0>(element), std::get<1>(element))};
-    }
-
-    if (!std::get<8>(element).empty()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", std::get<0>(element), std::get<1>(element))};
-    }
+    check_no_lat_lon(element);
+    check_no_rel_members(element);
 
     Way way;
     init_object(way, element);
@@ -294,17 +306,8 @@ private:
 
   void process_relation(auto& element) {
 
-    if (std::get<2>(element).has_value()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", std::get<0>(element), std::get<1>(element))};
-    }
-
-    if (std::get<3>(element).has_value()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", std::get<0>(element), std::get<1>(element))};
-    }
-
-    if (!std::get<7>(element).empty()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", std::get<0>(element), std::get<1>(element))};
-    }
+    check_no_lat_lon(element);
+    check_no_way_nodes(element);
 
     Relation relation;
     init_object(relation, element);
