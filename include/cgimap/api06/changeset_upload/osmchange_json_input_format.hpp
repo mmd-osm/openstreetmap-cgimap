@@ -138,11 +138,16 @@ public:
   void process_message(const std::string &data) {
 
     try {
-      m_callback.start_document();
-      _parser.parse(data);
-      _parser.finish();
+      auto json_parser{ api06::OSMChangeJSONParserFormat::getMainParser(
+          [this](auto &parser) {
+            return this->process_action_elements(parser);
+          }) };
 
-      if (_parser.parser().isEmpty()) {
+      m_callback.start_document();
+      json_parser.parse(data);
+      json_parser.finish();
+
+      if (json_parser.parser().isEmpty()) {
         throw payload_error("Empty JSON payload");
       }
 
@@ -151,8 +156,8 @@ public:
       }
 
       m_callback.end_document();
-    } catch (const std::exception& e) {
-      throw http::bad_request(e.what());    // rethrow JSON parser error as HTTP 400 Bad request
+    } catch (const std::exception &e) {
+      throw http::bad_request(e.what()); // rethrow JSON parser error as HTTP 400 Bad request
     }
   }
 
@@ -160,9 +165,6 @@ private:
 
   using ActionElementsParser = decltype(api06::OSMChangeJSONParserFormat::getActionElementsParser());
   using MainParser = decltype(api06::OSMChangeJSONParserFormat::getMainParser());
-
-  MainParser _parser{api06::OSMChangeJSONParserFormat::getMainParser(
-                     std::bind_front(&api06::OSMChangeJSONParser::process_action_elements, this))};
 
   // OSM element callback
   bool process_action_elements(ActionElementsParser &parser) {
