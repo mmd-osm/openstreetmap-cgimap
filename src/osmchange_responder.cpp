@@ -206,44 +206,37 @@ struct sorting_formatter : public output_formatter {
   // LCOV_EXCL_STOP
 
   void write_json(output_formatter &fmt) {
-    std::vector<element> out_create;
-    std::vector<element> out_modify;
-    std::vector<element> out_delete;
-
-    for (auto &e : m_elements) {
-      if (e.m_info.version == 1) {
-        out_create.emplace_back(e);
-      } else if (e.m_info.visible) {
-        out_modify.emplace_back(e);
-      } else {
-        out_delete.emplace_back(e);
-      }
-    }
 
     fmt.start_osmchange();
 
-    if (!out_create.empty()) {
-      fmt.start_action(action_type::create);
-      for (const auto &e : out_create) {
-        write_element(e, fmt);
+    std::optional<action_type> current_action;
+
+    for (const auto &e : m_elements) {
+      using enum action_type;
+      action_type new_action{};
+
+      if (e.m_info.version == 1) {
+        new_action = create;
+      } else if (e.m_info.visible) {
+        new_action = modify;
+      } else {
+        new_action = del;
       }
-      fmt.end_action(action_type::create);
+
+      if (!current_action || *current_action != new_action) {
+        if (current_action) {
+          fmt.end_element();
+        }
+        fmt.start_action(new_action);
+        fmt.start_element();
+        current_action = new_action;
+      }
+
+      write_element(e, fmt);
     }
 
-    if (!out_modify.empty()) {
-      fmt.start_action(action_type::modify);
-      for (const auto &e : out_modify) {
-        write_element(e, fmt);
-      }
-      fmt.end_action(action_type::modify);
-    }
-
-    if (!out_delete.empty()) {
-      fmt.start_action(action_type::del);
-      for (const auto &e : out_delete) {
-        write_element(e, fmt);
-      }
-      fmt.end_action(action_type::del);
+    if (current_action) {
+      fmt.end_element();
     }
 
     fmt.end_osmchange();
