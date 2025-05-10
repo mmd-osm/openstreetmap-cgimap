@@ -47,20 +47,6 @@ using SJParser::Ignore;
 
 class OSMChangeJSONParserFormat {
 
-  [[nodiscard]] static bool validateType(const std::string &type) {
-    if (type != "node" && type != "way" && type != "relation") {
-      throw payload_error{fmt::format("Unknown element {}, expecting node, way or relation", type)};
-    }
-    return true;
-  }
-
-  [[nodiscard]] static bool validateAction(const std::string &action) {
-    if (action != "create" && action != "modify" && action != "delete") {
-      throw payload_error{fmt::format("Unknown action {}, expecting create, modify or delete", action)};
-    }
-    return true;
-  }
-
   [[nodiscard]] static bool check_version_callback(const std::string& version) {
 
     if (version != "0.6") {
@@ -71,7 +57,7 @@ class OSMChangeJSONParserFormat {
 
   static auto getMemberParser() {
 
-    return SAutoObject{std::tuple{Member{"type", Value<std::string>{validateType}},
+    return SAutoObject{std::tuple{Member{"type", Value<std::string>{}},
                                   Member{"ref", Value<int64_t>{}},
                                   Member{"role", Value<std::string>{}, Optional, ""}}
                                   };
@@ -80,7 +66,7 @@ class OSMChangeJSONParserFormat {
   static auto getElementsParser() {
     return SAutoObject{
           std::tuple{
-            Member{"type", Value<std::string>{validateType}},
+            Member{"type", Value<std::string>{}},
             Member{"id", Value<int64_t>{}},
             Member{"lat", OptionalValue<double>{}, Optional, std::optional<double>{}},
             Member{"lon", OptionalValue<double>{}, Optional, std::optional<double>{}},
@@ -98,7 +84,7 @@ class OSMChangeJSONParserFormat {
     using enum operation;
     return Object{
           std::tuple{
-            Member{"action", Value<std::string>{validateAction}},
+            Member{"action", Value<std::string>{}},
             Member{"elements", SArray{getElementsParser()}},
             Member{"if-unused", Value<bool>{}, Optional},
           },
@@ -125,6 +111,7 @@ class OSMChangeJSONParserFormat {
 
 class OSMChangeJSONParser {
 
+
 public:
   explicit OSMChangeJSONParser(Parser_Callback& callback)
       : m_callback(callback) { }
@@ -134,6 +121,8 @@ public:
 
   OSMChangeJSONParser(OSMChangeJSONParser &&) = delete;
   OSMChangeJSONParser &operator=(OSMChangeJSONParser &&) = delete;
+
+  ~OSMChangeJSONParser() = default;
 
   void process_message(const std::string &data) {
 
@@ -162,9 +151,7 @@ public:
   }
 
 private:
-
   using ActionElementsParser = decltype(api06::OSMChangeJSONParserFormat::getActionElementsParser());
-  using MainParser = decltype(api06::OSMChangeJSONParserFormat::getMainParser());
 
   // OSM element callback
   bool process_action_elements(ActionElementsParser &parser) {
@@ -182,7 +169,6 @@ private:
   }
 
   void process_action(ActionElementsParser &parser) {
-
     using enum operation;
     auto & action = parser.get<0>();
     if (action == "create") {
@@ -191,6 +177,8 @@ private:
       m_operation = op_modify;
     } else if (action == "delete") {
       m_operation = op_delete;
+    } else {
+      throw payload_error{fmt::format("Unknown action {}, expecting create, modify or delete", action)};
     }
   }
 
@@ -210,7 +198,6 @@ private:
   }
 
   void process_elements(ActionElementsParser &parser) {
-
     for (const auto& element : parser.get<1>()) {
       element_count++;
       process_type(element);
@@ -218,7 +205,6 @@ private:
   }
 
   void process_type(auto& element) {
-
     auto& type = std::get<0>(element);
 
     if (type == "node") {
@@ -227,31 +213,8 @@ private:
       process_way(element);
     } else if (type == "relation") {
       process_relation(element);
-    }
-  }
-
-  void check_no_lat_lon(auto& element) const {
-
-    if (std::get<2>(element).has_value()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", std::get<0>(element), std::get<1>(element))};
-    }
-
-    if (std::get<3>(element).has_value()) {
-      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", std::get<0>(element), std::get<1>(element))};
-    }
-  }
-
-  void check_no_way_nodes(auto& element) const {
-
-    if (!std::get<7>(element).empty()) {
-      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", std::get<0>(element), std::get<1>(element))};
-    }
-  }
-
-  void check_no_rel_members(auto& element) const {
-
-    if (!std::get<8>(element).empty()) {
-      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", std::get<0>(element), std::get<1>(element))};
+    } else {
+      throw payload_error{fmt::format("Unknown element {}, expecting node, way or relation", type)};
     }
   }
 
@@ -259,7 +222,6 @@ private:
 
     check_no_way_nodes(element);
     check_no_rel_members(element);
-
 
     Node node;
     init_object(node, element);
@@ -274,10 +236,7 @@ private:
     }
 
     process_tags(node, element);
-
-    if (!node.is_valid(m_operation)) {
-      throw payload_error{fmt::format("{} does not include all mandatory fields", node.to_string())};
-    }
+    check_valid_object(node);
 
     m_callback.process_node(node, m_operation, m_if_unused);
   }
@@ -296,10 +255,7 @@ private:
     }
 
     process_tags(way, element);
-
-    if (!way.is_valid(m_operation)) {
-      throw payload_error{fmt::format("{} does not include all mandatory fields", way.to_string())};
-    }
+    check_valid_object(way);
 
     m_callback.process_way(way, m_operation, m_if_unused);
   }
@@ -313,46 +269,13 @@ private:
     init_object(relation, element);
 
     process_relation_members(relation, element);
-
     process_tags(relation, element);
-
-    if (!relation.is_valid(m_operation)) {
-      throw payload_error{fmt::format("{} does not include all mandatory fields", relation.to_string())};
-    }
+    check_valid_object(relation);
 
     m_callback.process_relation(relation, m_operation, m_if_unused);
   }
 
-  void process_relation_members(Relation &relation, auto& element) const {
-
-    // relation member attribute is mandatory for create and modify operations.
-    // Its value can be an empty array, though. Delete operations don't require
-    // this attribute.
-    if (m_operation == operation::op_delete)
-      return;
-
-    for (const auto& [type, ref, role] : std::get<8>(element)) {
-      RelationMember member;
-      member.set_type(type);
-      member.set_ref(ref);
-      member.set_role(role);
-
-      if (!member.is_valid()) {
-        throw payload_error{fmt::format("Missing mandatory field on relation member in {}", relation.to_string()) };
-      }
-      relation.add_member(member);
-    }
-  }
-
-  void process_tags(OSMObject &o, auto& element) const {
-
-    for (const auto &[key, value] : std::get<6>(element)) {
-        o.add_tag(key, value);
-    }
-  }
-
   void init_object(OSMObject &object, auto& element) const {
-
     // id
     object.set_id(std::get<1>(element));
 
@@ -377,6 +300,61 @@ private:
       if (object.version() < 1) {
         throw payload_error{ fmt::format("Invalid version number {} in {}", object.version(), object.to_string()) };
       }
+    }
+  }
+
+  void process_tags(OSMObject &o, auto& element) const {
+    for (const auto &[key, value] : std::get<6>(element)) {
+        o.add_tag(key, value);
+    }
+  }
+
+  void process_relation_members(Relation &relation, auto& element) const {
+
+    // relation member attribute is mandatory for create and modify operations.
+    // Its value can be an empty array, though. Delete operations don't require
+    // this attribute.
+    if (m_operation == operation::op_delete)
+      return;
+
+    for (const auto& [type, ref, role] : std::get<8>(element)) {
+      RelationMember member;
+      member.set_type(type);
+      member.set_ref(ref);
+      member.set_role(role);
+
+      if (!member.is_valid()) {
+        throw payload_error{fmt::format("Missing mandatory field on relation member in {}", relation.to_string()) };
+      }
+      relation.add_member(member);
+    }
+  }
+
+  void check_no_lat_lon(auto& element) const {
+    if (std::get<2>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lat, but it is not a node", std::get<0>(element), std::get<1>(element))};
+    }
+
+    if (std::get<3>(element).has_value()) {
+      throw payload_error{fmt::format("Element {}/{:d} has lon, but it is not a node", std::get<0>(element), std::get<1>(element))};
+    }
+  }
+
+  void check_no_way_nodes(auto& element) const {
+    if (!std::get<7>(element).empty()) {
+      throw payload_error{fmt::format("Element {}/{:d} has way nodes, but it is not a way", std::get<0>(element), std::get<1>(element))};
+    }
+  }
+
+  void check_no_rel_members(auto& element) const {
+    if (!std::get<8>(element).empty()) {
+      throw payload_error{fmt::format("Element {}/{:d} has relation members, but it is not a relation", std::get<0>(element), std::get<1>(element))};
+    }
+  }
+
+  void check_valid_object(const OSMObject &object) const {
+    if (!object.is_valid(m_operation)) {
+      throw payload_error{fmt::format("{} does not include all mandatory fields", object.to_string())};
     }
   }
 
