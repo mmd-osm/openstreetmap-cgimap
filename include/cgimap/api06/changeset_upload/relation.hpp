@@ -110,6 +110,11 @@ public:
 
   ~Relation() override = default;
 
+  void add_members(std::vector<RelationMember>&& members) {
+    for (auto& mbr : members)
+      add_member(mbr);
+  }
+
   void add_member(RelationMember &member) {
     if (!member.is_valid())
       throw payload_error(
