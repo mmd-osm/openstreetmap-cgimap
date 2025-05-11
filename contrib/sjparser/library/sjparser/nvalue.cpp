@@ -21,17 +21,57 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 *******************************************************************************/
 
-#pragma once
-
-#include "array.h"
-#include "map.h"
-#include "object.h"
-#include "parser.h"
-#include "s_array.h"
-#include "s_auto_object.h"
-#include "s_custom_object.h"
-#include "s_map.h"
-#include "value.h"
 #include "nvalue.h"
-#include "optional_value.h"
-#include "optional_nvalue.h"
+
+namespace SJParser {
+
+
+template <typename ValueT>
+NValue<ValueT>::NValue(NValue &&other) noexcept
+    : TokenParser{std::move(other)},
+      _value{std::move(other._value)} {}
+
+template <typename ValueT>
+NValue<ValueT> &NValue<ValueT>::operator=(NValue &&other) noexcept {
+  TokenParser::operator=(std::move(other));
+  _value = std::move(other._value);
+
+  return *this;
+}
+
+template <typename ValueT> void NValue<ValueT>::on(TokenType<ValueT> value) {
+  setNotEmpty();
+  _value = value;
+  endParsing();
+}
+
+template <typename ValueT>
+void NValue<ValueT>::on(TokenSecondaryType<ValueT> value) {
+  if constexpr (!std::is_same_v<TokenSecondaryType<ValueT>, SJParser::DummyT>) {
+    setNotEmpty();
+    _value = static_cast<decltype(_value)>(value);
+    endParsing();
+  }
+}
+
+template <typename ValueT> const ValueT &NValue<ValueT>::get() const {
+  checkSet();
+  return _value;
+}
+
+template <typename ValueT> ValueT &&NValue<ValueT>::pop() {
+  checkSet();
+  unset();
+  return std::move(_value);
+}
+
+template <typename ValueT> void NValue<ValueT>::finish() {
+ // NValue has no callback
+}
+
+template class NValue<int64_t>;
+template class NValue<bool>;
+template class NValue<double>;
+template class NValue<std::string>;
+
+}  // namespace SJParser
