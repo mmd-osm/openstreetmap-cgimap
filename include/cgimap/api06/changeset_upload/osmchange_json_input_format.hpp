@@ -38,7 +38,9 @@ using SJParser::SArray;
 using SJParser::SAutoObject;
 using SJParser::SMap;
 using SJParser::Value;
+using SJParser::NValue;
 using SJParser::OptionalValue;
+using SJParser::OptionalNValue;
 using SJParser::Reaction;
 using SJParser::ObjectOptions;
 using SJParser::Presence::Optional;
@@ -57,23 +59,23 @@ class OSMChangeJSONParserFormat {
 
   static auto getMemberParser() {
 
-    return SAutoObject{std::tuple{Member{"type", Value<std::string>{}},
-                                  Member{"ref", Value<int64_t>{}},
-                                  Member{"role", Value<std::string>{}, Optional, ""}}
+    return SAutoObject{std::tuple{Member{"type", NValue<std::string>{}},
+                                  Member{"ref", NValue<int64_t>{}},
+                                  Member{"role", NValue<std::string>{}, Optional, ""}}
                                   };
   }
 
   static auto getElementsParser() {
     return SAutoObject{
           std::tuple{
-            Member{"type", Value<std::string>{}},
-            Member{"id", Value<int64_t>{}},
-            Member{"lat", OptionalValue<double>{}, Optional, std::optional<double>{}},
-            Member{"lon", OptionalValue<double>{}, Optional, std::optional<double>{}},
-            Member{"version", OptionalValue<int64_t>{}, Optional, std::optional<int64_t>{}},
-            Member{"changeset", Value<int64_t>{}},
-            Member{"tags", SMap{Value<std::string>{}}, Optional, std::map<std::string, std::string>{}},
-            Member{"nodes", SArray{Value<int64_t>{}}, Optional, std::vector<int64_t>{}},
+            Member{"type", NValue<std::string>()},
+            Member{"id", NValue<int64_t>{}},
+            Member{"lat", OptionalNValue<double>{}, Optional, std::optional<double>{}},
+            Member{"lon", OptionalNValue<double>{}, Optional, std::optional<double>{}},
+            Member{"version", OptionalNValue<int64_t>{}, Optional, std::optional<int64_t>{}},
+            Member{"changeset", NValue<int64_t>{}},
+            Member{"tags", SMap{NValue<std::string>{}}, Optional, std::map<std::string, std::string>{}},
+            Member{"nodes", SArray{NValue<int64_t>{}}, Optional, std::vector<int64_t>{}},
             Member{"members", SArray{getMemberParser()}, Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
           }
       };
@@ -84,9 +86,9 @@ class OSMChangeJSONParserFormat {
     using enum operation;
     return Object{
           std::tuple{
-            Member{"action", Value<std::string>{}},
+            Member{"action", NValue<std::string>{}},
             Member{"elements", SArray{getElementsParser()}},
-            Member{"if-unused", Value<bool>{}, Optional},
+            Member{"if-unused", NValue<bool>{}, Optional},
           },
         ObjectOptions{Reaction::Ignore},
         action_elements_parser_callback
@@ -99,7 +101,7 @@ class OSMChangeJSONParserFormat {
        Object{
         std::tuple{
           Member{"version", Value<std::string>{check_version_callback}},
-          Member{"generator", Value<std::string>{}, Optional},
+          Member{"generator", NValue<std::string>{}, Optional},
           Member{"osmChange", Array{getActionElementsParser(action_elements_parser_callback)}}
         },
         ObjectOptions{Reaction::Ignore}
