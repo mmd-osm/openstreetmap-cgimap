@@ -589,11 +589,11 @@ TEST_CASE("Invalid data", "[osmchange][json]") {
 // LARGE MESSAGE TESTS
 
 TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
-/*
-  // Test JSON processing with a very large message
-  std::stringstream s;
 
-  s << R"(
+  // Test JSON processing with a very large message
+  std::string s;
+
+  s = R"(
       {
         "version": "0.6",
         "generator": "demo",
@@ -605,7 +605,7 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
   for (int i = 1; i < 100000; i++) {
 
     if (i > 1) {
-      s << ",\n";
+      s += ",\n";
     }
 
     api06::Node node;
@@ -621,17 +621,21 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
 
       cb.nodes.emplace_back(node, operation::op_create, false);
 
-      s << fmt::format(R"(
+      s += fmt::format(R"(
           {{
-            "type": "node",
             "action": "{}",
-            "id": {},
-            "lat": 1,
-            "lon": 2,
-            "changeset": 123,
-            "tags": {{
-              "some key": "some value"
-            }}
+            "elements": [
+             {{
+              "type": "node",
+              "id": {},
+              "lat": 1,
+              "lon": 2,
+              "changeset": 123,
+              "tags": {{
+                "some key": "some value"
+              }}
+             }}
+            ]
           }}
          )", "create", -i);
 
@@ -644,18 +648,22 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
 
       cb.nodes.emplace_back(node, operation::op_modify, false);
 
-      s << fmt::format(R"(
+      s += fmt::format(R"(
           {{
-            "type": "node",
             "action": "{}",
-            "id": {},
-            "lat": 1,
-            "lon": 2,
-            "version": 1,
-            "changeset": 123,
-            "tags": {{
-              "some key": "some value"
-            }}
+            "elements": [
+             {{
+              "type": "node",
+              "id": {},
+              "lat": 1,
+              "lon": 2,
+              "version": 1,
+              "changeset": 123,
+              "tags": {{
+                "some key": "some value"
+              }}
+             }}
+            ]
           }}
          )", "modify", -i);
       break;
@@ -664,16 +672,20 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
       node.set_version(1);
       cb.nodes.emplace_back(node, operation::op_delete, false);
 
-      s << fmt::format(R"(
+      s += fmt::format(R"(
           {{
-            "type": "node",
             "action": "{}",
-            "id": {},
-            "version": 1,
-            "changeset": 123,
-            "tags": {{
-              "some key": "some value"
-            }}
+            "elements": [
+             {{
+              "type": "node",
+              "id": {},
+              "version": 1,
+              "changeset": 123,
+              "tags": {{
+                "some key": "some value"
+              }}
+             }}
+            ]
           }}
          )", "delete", -i);
 
@@ -682,13 +694,13 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
     }
   }
 
-  s << R"(
+  s += R"(
         ]
       }
     )";
 
-  REQUIRE_NOTHROW(process_testmsg(s.str(), cb));
-*/
+  REQUIRE_NOTHROW(process_testmsg(s, cb));
+
 }
 
 /*
