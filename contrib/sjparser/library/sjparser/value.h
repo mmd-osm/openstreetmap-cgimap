@@ -24,6 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include <functional>
+#include <variant>
 
 #include "internals/token_parser.h"
 
@@ -34,14 +35,14 @@ namespace SJParser {
  * @tparam ValueT JSON value type, can be std::string, int64_t, bool or double
  */
 
-template <typename ValueT> class Value : public TokenParser {
+template <typename ValueT, bool EnableCallback = true> class Value : public TokenParser {
  public:
   /** Underlying type, that can be obtained from this parser with #get or #pop.
    */
   using ValueType = ValueT;
 
   /** Finish callback type. */
-  using Callback = std::function<bool(const ValueType &)>;
+  using Callback = std::conditional_t<EnableCallback, std::function<bool(const ValueType &)>, std::nullptr_t>;
 
   /** @brief Constructor.
    *
@@ -57,7 +58,7 @@ template <typename ValueT> class Value : public TokenParser {
   Value(Value &&other) noexcept;
 
   /** Move assignment operator */
-  Value<ValueT> &operator=(Value &&other) noexcept;
+  Value<ValueT, EnableCallback> &operator=(Value &&other) noexcept;
 
   /** @cond INTERNAL Boilerplate. */
   ~Value() override = default;
@@ -73,7 +74,8 @@ template <typename ValueT> class Value : public TokenParser {
    *
    * If the callback returns false, parsing will be stopped with an error.
    */
-  void setFinishCallback(Callback on_finish);
+
+  void setFinishCallback(Callback on_finish) requires EnableCallback;
 
   /** @brief Parsed value getter.
    *
@@ -101,12 +103,17 @@ template <typename ValueT> class Value : public TokenParser {
   void finish() override;
 
   ValueType _value;
-  Callback _on_finish;
+  std::conditional_t<EnableCallback, Callback, std::monostate> _on_finish{};
 };
 
 extern template class Value<int64_t>;
 extern template class Value<bool>;
 extern template class Value<double>;
 extern template class Value<std::string>;
+
+extern template class Value<int64_t, false>;
+extern template class Value<bool, false>;
+extern template class Value<double, false>;
+extern template class Value<std::string, false>;
 
 }  // namespace SJParser
