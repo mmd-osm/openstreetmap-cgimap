@@ -17,6 +17,7 @@
 #include "cgimap/api06/changeset_upload/way.hpp"
 #include "cgimap/types.hpp"
 
+#include "sjparser/s_array.h"
 #include "sjparser/sjparser.h"
 
 #include <fmt/core.h>
@@ -43,6 +44,8 @@ using SJParser::Reaction;
 using SJParser::ObjectOptions;
 using SJParser::Presence::Optional;
 using SJParser::Ignore;
+using SJParser::EnableCallback;
+using SJParser::DisableCallback;
 
 
 class OSMChangeJSONParserFormat {
@@ -73,8 +76,8 @@ class OSMChangeJSONParserFormat {
             Member{"version", OptionalValue<int64_t, false>{}, Optional, std::optional<int64_t>{}},
             Member{"changeset", Value<int64_t, false>{}},
             Member{"tags", SMap<decltype(Value<std::string, false>{}), false>{Value<std::string, false>{}}, Optional, std::map<std::string, std::string>{}},
-            Member{"nodes", SArray<decltype(Value<int64_t, false>{}), false>{Value<int64_t, false>{}}, Optional, std::vector<int64_t>{}},
-            Member{"members", SArray<decltype(getMemberParser()),false>{getMemberParser()}, Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
+            Member{"nodes", SArray(Value<int64_t, false>{}, DisableCallback{}), Optional, std::vector<int64_t>{}},
+            Member{"members", SArray(getMemberParser(), DisableCallback{}), Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
           }
       };
   }
@@ -85,7 +88,7 @@ class OSMChangeJSONParserFormat {
     return Object{
           std::tuple{
             Member{"action", Value<std::string, false>{}},
-            Member{"elements", SArray<decltype(getElementsParser()),false>{getElementsParser()}},
+            Member{"elements", SArray{getElementsParser(), DisableCallback{}}},
             Member{"if-unused", Value<bool, false>{}, Optional},
           },
         ObjectOptions{Reaction::Ignore},
