@@ -72,7 +72,7 @@ class OSMChangeJSONParserFormat {
             Member{"lon", OptionalValue<double, false>{}, Optional, std::optional<double>{}},
             Member{"version", OptionalValue<int64_t, false>{}, Optional, std::optional<int64_t>{}},
             Member{"changeset", Value<int64_t, false>{}},
-            Member{"tags", SMap{Value<std::string, false>{}}, Optional, std::map<std::string, std::string>{}},
+            Member{"tags", SMap<decltype(Value<std::string, false>{}), false>{Value<std::string, false>{}}, Optional, std::map<std::string, std::string>{}},
             Member{"nodes", SArray{Value<int64_t, false>{}}, Optional, std::vector<int64_t>{}},
             Member{"members", SArray{getMemberParser()}, Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
           }
