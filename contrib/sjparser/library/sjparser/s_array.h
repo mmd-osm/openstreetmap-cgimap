@@ -137,6 +137,9 @@ SArray(SArray<ParserT> &) -> SArray<SArray<ParserT> &>;
 
 template <typename ParserT> SArray(ParserT &&) -> SArray<ParserT>;
 
+template <typename ParserT>
+SArray(ParserT&&, DisableCallback) -> SArray<ParserT, DisableCallback>;
+
 /****************************** Implementations *******************************/
 
 template <typename ParserT, typename EnableCallbackTag>
