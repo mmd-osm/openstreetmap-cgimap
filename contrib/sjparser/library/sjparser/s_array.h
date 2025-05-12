@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
+#include <variant>
 #include <vector>
 
 #include "array.h"
@@ -36,7 +37,7 @@ namespace SJParser {
  * @anchor SArray_T
  */
 
-template <typename ParserT> class SArray : public Array<ParserT> {
+template <typename ParserT, bool EnableCallback = true> class SArray : public Array<ParserT> {
  public:
   /** Underlying parser type */
   using ParserType = std::decay_t<ParserT>;
@@ -45,7 +46,7 @@ template <typename ParserT> class SArray : public Array<ParserT> {
   using ValueType = std::vector<typename ParserType::ValueType>;
 
   /** Finish callback type */
-  using Callback = std::function<bool(const ValueType &)>;
+  using Callback = std::conditional_t<EnableCallback, std::function<bool(const ValueType &)>, std::nullptr_t>;
 
   /** @brief Constructor.
    *
@@ -67,7 +68,7 @@ template <typename ParserT> class SArray : public Array<ParserT> {
   SArray(SArray &&other) noexcept;
 
   /** Move assignment operator */
-  SArray<ParserT> &operator=(SArray &&other) noexcept;
+  SArray<ParserT, EnableCallback> &operator=(SArray &&other) noexcept;
 
   /** @cond INTERNAL Boilerplate. */
   ~SArray() override = default;
@@ -84,7 +85,7 @@ template <typename ParserT> class SArray : public Array<ParserT> {
    *
    * If the callback returns false, parsing will be stopped with an error.
    */
-  void setFinishCallback(Callback on_finish);
+  void setFinishCallback(Callback on_finish) requires EnableCallback;
 
   /** @brief Parsed value getter.
    *
@@ -112,7 +113,7 @@ template <typename ParserT> class SArray : public Array<ParserT> {
   void reset() override;
 
   ValueType _values;
-  Callback _on_finish;
+  std::conditional_t<EnableCallback, Callback, std::monostate> _on_finish{};
 };
 
 template <typename ParserT>
@@ -125,58 +126,71 @@ template <typename ParserT> SArray(ParserT &&) -> SArray<ParserT>;
 
 /****************************** Implementations *******************************/
 
-template <typename ParserT>
+template <typename ParserT, bool EnableCallback>
 template <typename CallbackT>
-SArray<ParserT>::SArray(ParserT &&parser, CallbackT on_finish)
+SArray<ParserT, EnableCallback>::SArray(ParserT &&parser, CallbackT on_finish)
     requires(std::is_constructible_v<Callback, CallbackT> &&
              std::is_base_of_v<TokenParser, ParserType>)
-    : Array<ParserT>{std::forward<ParserT>(parser)},
-      _on_finish{std::move(on_finish)} {}
+    : Array<ParserT>{std::forward<ParserT>(parser)} {
+   if constexpr (EnableCallback) {
+      _on_finish= std::move(on_finish);
+   }
+}
 
-template <typename ParserT>
-SArray<ParserT>::SArray(SArray &&other) noexcept
+template <typename ParserT, bool EnableCallback>
+SArray<ParserT, EnableCallback>::SArray(SArray &&other) noexcept
     : Array<ParserT>{std::move(other)},
-      _values{std::move(other._values)},
-      _on_finish{std::move(other._on_finish)} {}
+      _values{std::move(other._values)} {
+   if constexpr (EnableCallback) {
+      _on_finish = std::move(other._on_finish);
+   }
+}
 
-template <typename ParserT>
-SArray<ParserT> &SArray<ParserT>::operator=(SArray &&other) noexcept {
+template <typename ParserT, bool EnableCallback>
+SArray<ParserT, EnableCallback> &SArray<ParserT, EnableCallback>::operator=(SArray &&other) noexcept {
   Array<ParserT>::operator=(std::move(other));
   _values = std::move(other._values);
-  _on_finish = std::move(other._on_finish);
+   if constexpr (EnableCallback) {
+    _on_finish = std::move(other._on_finish);
+   }
 
   return *this;
 }
 
-template <typename ParserT>
-void SArray<ParserT>::setFinishCallback(Callback on_finish) {
+template <typename ParserT, bool EnableCallback>
+void SArray<ParserT, EnableCallback>::setFinishCallback(Callback on_finish) requires EnableCallback {
   _on_finish = on_finish;
 }
 
-template <typename ParserT>
-const typename SArray<ParserT>::ValueType &SArray<ParserT>::get() const {
+template <typename ParserT, bool EnableCallback>
+const typename SArray<ParserT, EnableCallback>::ValueType &SArray<ParserT, EnableCallback>::get() const {
   TokenParser::checkSet();
   return _values;
 }
 
-template <typename ParserT>
-typename SArray<ParserT>::ValueType &&SArray<ParserT>::pop() {
+template <typename ParserT, bool EnableCallback>
+typename SArray<ParserT, EnableCallback>::ValueType &&SArray<ParserT, EnableCallback>::pop() {
   TokenParser::checkSet();
   TokenParser::unset();
   return std::move(_values);
 }
 
-template <typename ParserT> void SArray<ParserT>::childParsed() {
+template <typename ParserT, bool EnableCallback>
+void SArray<ParserT, EnableCallback>::childParsed() {
   _values.push_back(Array<ParserT>::parser().pop());
 }
 
-template <typename ParserT> void SArray<ParserT>::finish() {
-  if (_on_finish && !_on_finish(_values)) {
-    throw std::runtime_error("Callback returned false");
+template <typename ParserT, bool EnableCallback>
+void SArray<ParserT, EnableCallback>::finish() {
+  if constexpr (EnableCallback) {
+    if (_on_finish && !_on_finish(_values)) {
+      throw std::runtime_error("Callback returned false");
+    }
   }
 }
 
-template <typename ParserT> void SArray<ParserT>::reset() {
+template <typename ParserT, bool EnableCallback>
+void SArray<ParserT, EnableCallback>::reset() {
   ArrayParser::reset();
   _values = {};
 }
