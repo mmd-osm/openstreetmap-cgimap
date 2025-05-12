@@ -39,7 +39,6 @@ using SJParser::SAutoObject;
 using SJParser::SMap;
 using SJParser::Value;
 using SJParser::OptionalValue;
-using SJParser::OptionalNValue;
 using SJParser::Reaction;
 using SJParser::ObjectOptions;
 using SJParser::Presence::Optional;
@@ -69,9 +68,9 @@ class OSMChangeJSONParserFormat {
           std::tuple{
             Member{"type", Value<std::string, false>()},
             Member{"id", Value<int64_t, false>{}},
-            Member{"lat", OptionalValue<double>{}, Optional, std::optional<double>{}},
-            Member{"lon", OptionalValue<double>{}, Optional, std::optional<double>{}},
-            Member{"version", OptionalValue<int64_t>{}, Optional, std::optional<int64_t>{}},
+            Member{"lat", OptionalValue<double, false>{}, Optional, std::optional<double>{}},
+            Member{"lon", OptionalValue<double, false>{}, Optional, std::optional<double>{}},
+            Member{"version", OptionalValue<int64_t, false>{}, Optional, std::optional<int64_t>{}},
             Member{"changeset", Value<int64_t, false>{}},
             Member{"tags", SMap{Value<std::string, false>{}}, Optional, std::map<std::string, std::string>{}},
             Member{"nodes", SArray{Value<int64_t, false>{}}, Optional, std::vector<int64_t>{}},
