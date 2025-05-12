@@ -62,7 +62,8 @@ Value<ValueT, EnableCallback> &Value<ValueT, EnableCallback>::operator=(Value &&
   return *this;
 }
 
-template <typename ValueT, bool EnableCallback> void Value<ValueT, EnableCallback>::on(TokenType<ValueT> value) {
+template <typename ValueT, bool EnableCallback>
+void Value<ValueT, EnableCallback>::on(TokenType<ValueT> value) {
   setNotEmpty();
   _value = value;
   endParsing();

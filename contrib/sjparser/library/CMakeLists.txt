@@ -5,7 +5,6 @@ add_library(sjparser STATIC
   sjparser/yajl_parser.cpp
   sjparser/value.cpp
   sjparser/optional_value.cpp
-  sjparser/optional_nvalue.cpp
 
   sjparser/internals/token_parser.cpp
   sjparser/internals/dispatcher.cpp

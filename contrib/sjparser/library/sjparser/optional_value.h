@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <functional>
 #include <optional>
+#include <variant>
 
 #include "internals/token_parser.h"
 
@@ -35,14 +36,14 @@ namespace SJParser {
  * @tparam ValueT JSON value type, can be std::string, int64_t, bool or double
  */
 
-template <typename ValueT> class OptionalValue : public TokenParser {
+template <typename ValueT, bool EnableCallback = true> class OptionalValue : public TokenParser {
  public:
   /** Underlying type, that can be obtained from this parser with #get or #pop.
    */
   using ValueType = std::optional<ValueT>;
 
   /** Finish callback type. */
-  using Callback = std::function<bool(const ValueType &)>;
+  using Callback = std::conditional_t<EnableCallback, std::function<bool(const ValueType &)>, std::nullptr_t>;
 
   /** @brief Constructor.
    *
@@ -58,7 +59,7 @@ template <typename ValueT> class OptionalValue : public TokenParser {
   OptionalValue(OptionalValue &&other) noexcept;
 
   /** Move assignment operator */
-  OptionalValue<ValueT> &operator=(OptionalValue &&other) noexcept;
+  OptionalValue<ValueT, EnableCallback> &operator=(OptionalValue &&other) noexcept;
 
   /** @cond INTERNAL Boilerplate. */
   ~OptionalValue() override = default;
@@ -74,7 +75,7 @@ template <typename ValueT> class OptionalValue : public TokenParser {
    *
    * If the callback returns false, parsing will be stopped with an error.
    */
-  void setFinishCallback(Callback on_finish);
+  void setFinishCallback(Callback on_finish) requires EnableCallback;
 
   /** @brief Parsed value getter.
    *
@@ -102,12 +103,17 @@ template <typename ValueT> class OptionalValue : public TokenParser {
   void finish() override;
 
   ValueType _value;
-  Callback _on_finish;
+  std::conditional_t<EnableCallback, Callback, std::monostate> _on_finish{};
 };
 
 extern template class OptionalValue<int64_t>;
 extern template class OptionalValue<bool>;
 extern template class OptionalValue<double>;
 extern template class OptionalValue<std::string>;
+
+extern template class OptionalValue<int64_t, false>;
+extern template class OptionalValue<bool, false>;
+extern template class OptionalValue<double, false>;
+extern template class OptionalValue<std::string, false>;
 
 }  // namespace SJParser
