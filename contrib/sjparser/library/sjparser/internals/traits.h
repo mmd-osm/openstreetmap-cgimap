@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <type_traits>
 
+#include "token_parser.h"
+
 namespace SJParser {
 
 template <typename T>
@@ -32,6 +34,15 @@ concept HasValueType = requires { typename std::decay_t<T>::ValueType; };
 
 template <typename ParserT>
 constexpr bool IsStorageParser = HasValueType<ParserT>;
+
+template <typename NameT>
+concept ValidNameType = std::is_same_v<NameT, int64_t> ||
+            std::is_same_v<NameT, bool> ||
+            std::is_same_v<NameT, double> ||
+            std::is_same_v<NameT, std::string_view>;
+
+template <typename ParserT>
+concept ValidParserType = std::is_base_of_v<TokenParser, std::decay_t<ParserT>>;
 
 struct EnableCallback : std::true_type {};
 struct DisableCallback : std::false_type {};

@@ -37,15 +37,6 @@ enum class Presence {
   Optional
 };
 
-template <typename NameT>
-concept ValidNameType = std::is_same_v<NameT, int64_t> ||
-            std::is_same_v<NameT, bool> ||
-            std::is_same_v<NameT, double> ||
-            std::is_same_v<NameT, std::string_view>;
-
-template <typename ParserT>
-concept ValidParserType = std::is_base_of_v<TokenParser, std::decay_t<ParserT>>;
-
 /** @brief Member of object parsers specification.
  *
  * This structure holds a specification of individual member for object parsers.
