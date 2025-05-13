@@ -25,15 +25,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace SJParser {
 
-template <typename ValueT, bool EnableCallback>
-OptionalValue<ValueT, EnableCallback>::OptionalValue(Callback on_finish)  {
+template <typename ValueT, typename EnableCallbackTag>
+OptionalValue<ValueT, EnableCallbackTag>::OptionalValue(Callback on_finish) {
   if constexpr (EnableCallback) {
     _on_finish = std::move(on_finish);
   }
 }
 
-template <typename ValueT, bool EnableCallback>
-OptionalValue<ValueT, EnableCallback>::OptionalValue(OptionalValue &&other) noexcept
+template <typename ValueT, typename EnableCallbackTag>
+OptionalValue<ValueT, EnableCallbackTag>::OptionalValue(OptionalValue &&other) noexcept
     : TokenParser{std::move(other)},
       _value{std::move(other._value)} {
 
@@ -42,8 +42,8 @@ OptionalValue<ValueT, EnableCallback>::OptionalValue(OptionalValue &&other) noex
   }
 }
 
-template <typename ValueT, bool EnableCallback>
-OptionalValue<ValueT, EnableCallback> &OptionalValue<ValueT, EnableCallback>::operator=(OptionalValue &&other) noexcept {
+template <typename ValueT, typename EnableCallbackTag>
+OptionalValue<ValueT, EnableCallbackTag> &OptionalValue<ValueT, EnableCallbackTag>::operator=(OptionalValue &&other) noexcept {
   TokenParser::operator=(std::move(other));
   _value = std::move(other._value);
   if constexpr (EnableCallback) {
@@ -53,20 +53,20 @@ OptionalValue<ValueT, EnableCallback> &OptionalValue<ValueT, EnableCallback>::op
   return *this;
 }
 
-template <typename ValueT, bool EnableCallback>
-void OptionalValue<ValueT, EnableCallback>::setFinishCallback(Callback on_finish)  requires EnableCallback {
+template <typename ValueT, typename EnableCallbackTag>
+void OptionalValue<ValueT, EnableCallbackTag>::setFinishCallback(Callback on_finish)  requires EnableCallback {
   _on_finish = on_finish;
 }
 
-template <typename ValueT, bool EnableCallback>
-void OptionalValue<ValueT, EnableCallback>::on(TokenType<ValueT> value) {
+template <typename ValueT, typename EnableCallbackTag>
+void OptionalValue<ValueT, EnableCallbackTag>::on(TokenType<ValueT> value) {
   setNotEmpty();
   _value = value;
   endParsing();
 }
 
-template <typename ValueT, bool EnableCallback>
-void OptionalValue<ValueT, EnableCallback>::on(TokenSecondaryType<ValueT> value) {
+template <typename ValueT, typename EnableCallbackTag>
+void OptionalValue<ValueT, EnableCallbackTag>::on(TokenSecondaryType<ValueT> value) {
   if constexpr (!std::is_same_v<TokenSecondaryType<ValueT>, SJParser::DummyT>) {
     setNotEmpty();
     _value = static_cast<decltype(_value)>(value);
@@ -74,8 +74,8 @@ void OptionalValue<ValueT, EnableCallback>::on(TokenSecondaryType<ValueT> value)
   }
 }
 
-template <typename ValueT, bool EnableCallback>
-void OptionalValue<ValueT, EnableCallback>::finish() {
+template <typename ValueT, typename EnableCallbackTag>
+void OptionalValue<ValueT, EnableCallbackTag>::finish() {
   if constexpr (EnableCallback) {
     if (_on_finish && !_on_finish(_value)) {
       throw std::runtime_error("Callback returned false");
@@ -83,27 +83,26 @@ void OptionalValue<ValueT, EnableCallback>::finish() {
   }
 }
 
-template <typename ValueT, bool EnableCallback>
-const typename OptionalValue<ValueT, EnableCallback>::ValueType &
-OptionalValue<ValueT, EnableCallback>::get() const {
+template <typename ValueT, typename EnableCallbackTag>
+const typename OptionalValue<ValueT, EnableCallbackTag>::ValueType &
+OptionalValue<ValueT, EnableCallbackTag>::get() const {
   return _value;
 }
 
-template <typename ValueT, bool EnableCallback>
-typename OptionalValue<ValueT, EnableCallback>::ValueType &&
-OptionalValue<ValueT, EnableCallback>::pop() {
+template <typename ValueT, typename EnableCallbackTag>
+typename OptionalValue<ValueT, EnableCallbackTag>::ValueType &&
+OptionalValue<ValueT, EnableCallbackTag>::pop() {
   unset();
   return std::move(_value);
 }
 
-template class OptionalValue<int64_t>;
-template class OptionalValue<bool>;
-template class OptionalValue<double>;
-template class OptionalValue<std::string>;
+template class OptionalValue<int64_t, std::true_type>;
+template class OptionalValue<bool, std::true_type>;
+template class OptionalValue<double, std::true_type>;
+template class OptionalValue<std::string, std::true_type>;
 
-template class OptionalValue<int64_t, false>;
-template class OptionalValue<bool, false>;
-template class OptionalValue<double, false>;
-template class OptionalValue<std::string, false>;
-
+template class OptionalValue<int64_t, std::false_type>;
+template class OptionalValue<bool, std::false_type>;
+template class OptionalValue<double, std::false_type>;
+template class OptionalValue<std::string, std::false_type>;
 }  // namespace SJParser

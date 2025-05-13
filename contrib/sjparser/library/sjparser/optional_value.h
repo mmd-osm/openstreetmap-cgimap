@@ -28,6 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <variant>
 
 #include "internals/token_parser.h"
+#include "internals/traits.h"
 
 namespace SJParser {
 
@@ -36,14 +37,17 @@ namespace SJParser {
  * @tparam ValueT JSON value type, can be std::string, int64_t, bool or double
  */
 
-template <typename ValueT, bool EnableCallback = true> class OptionalValue : public TokenParser {
+template <typename ValueT, typename EnableCallbackTag = std::true_type> class OptionalValue : public TokenParser {
  public:
+  static constexpr bool EnableCallback = EnableCallbackTag::value;
   /** Underlying type, that can be obtained from this parser with #get or #pop.
    */
   using ValueType = std::optional<ValueT>;
 
   /** Finish callback type. */
   using Callback = std::conditional_t<EnableCallback, std::function<bool(const ValueType &)>, std::nullptr_t>;
+
+  explicit OptionalValue(DisableCallback) : OptionalValue(nullptr) {};
 
   /** @brief Constructor.
    *
@@ -53,13 +57,14 @@ template <typename ValueT, bool EnableCallback = true> class OptionalValue : pub
    * argument.
    * If the callback returns false, parsing will be stopped with an error.
    */
+
   explicit OptionalValue(Callback on_finish = nullptr);
 
   /** Move constructor. */
   OptionalValue(OptionalValue &&other) noexcept;
 
   /** Move assignment operator */
-  OptionalValue<ValueT, EnableCallback> &operator=(OptionalValue &&other) noexcept;
+  OptionalValue<ValueT, EnableCallbackTag> &operator=(OptionalValue &&other) noexcept;
 
   /** @cond INTERNAL Boilerplate. */
   ~OptionalValue() override = default;
@@ -106,14 +111,13 @@ template <typename ValueT, bool EnableCallback = true> class OptionalValue : pub
   std::conditional_t<EnableCallback, Callback, std::monostate> _on_finish{};
 };
 
-extern template class OptionalValue<int64_t>;
-extern template class OptionalValue<bool>;
-extern template class OptionalValue<double>;
-extern template class OptionalValue<std::string>;
+extern template class OptionalValue<int64_t, std::true_type>;
+extern template class OptionalValue<bool, std::true_type>;
+extern template class OptionalValue<double, std::true_type>;
+extern template class OptionalValue<std::string, std::true_type>;
 
-extern template class OptionalValue<int64_t, false>;
-extern template class OptionalValue<bool, false>;
-extern template class OptionalValue<double, false>;
-extern template class OptionalValue<std::string, false>;
-
+extern template class OptionalValue<int64_t, std::false_type>;
+extern template class OptionalValue<bool, std::false_type>;
+extern template class OptionalValue<double, std::false_type>;
+extern template class OptionalValue<std::string, std::false_type>;
 }  // namespace SJParser

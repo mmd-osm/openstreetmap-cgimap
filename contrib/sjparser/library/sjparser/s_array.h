@@ -28,11 +28,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vector>
 
 #include "array.h"
+#include "internals/traits.h"
 
 namespace SJParser {
-
-struct EnableCallback : std::true_type {};
-struct DisableCallback : std::false_type {};
 
 /** @brief %Array parser, that stores the result in an std::vector of
  * @ref SArray_T "ParserT" values.
@@ -41,9 +39,8 @@ struct DisableCallback : std::false_type {};
  * @anchor SArray_T
  */
 
-template <typename ParserT, typename EnableCallbackTag = std::true_type> class SArray : public Array<ParserT> {
+template <typename ParserT, typename EnableCallbackTag = std::true_type> class SArray : public Array<ParserT, EnableCallbackTag> {
  public:
-
   static constexpr bool EnableCallback = EnableCallbackTag::value;
 
   /** Underlying parser type */
@@ -55,10 +52,9 @@ template <typename ParserT, typename EnableCallbackTag = std::true_type> class S
   /** Finish callback type */
   using Callback = std::conditional_t<EnableCallback, std::function<bool(const ValueType &)>, std::nullptr_t>;
 
-
   explicit SArray(ParserT &&parser, DisableCallback)
       requires (std::is_base_of_v<TokenParser, ParserType>)
-      : Array<ParserT>(std::forward<ParserT>(parser)) {}
+      : Array<ParserT, EnableCallbackTag>(std::forward<ParserT>(parser)) {}
 
 
   /** @brief Constructor.
@@ -147,26 +143,26 @@ template <typename CallbackT>
 SArray<ParserT, EnableCallbackTag>::SArray(ParserT &&parser, CallbackT on_finish)
     requires(std::is_constructible_v<Callback, CallbackT> &&
              std::is_base_of_v<TokenParser, ParserType>)
-    : Array<ParserT>{std::forward<ParserT>(parser)} {
-   if constexpr (EnableCallbackTag::value) {
+    : Array<ParserT, EnableCallbackTag>{std::forward<ParserT>(parser)} {
+   if constexpr (EnableCallback) {
       _on_finish = std::move(on_finish);
    }
 }
 
 template <typename ParserT, typename EnableCallbackTag>
 SArray<ParserT, EnableCallbackTag>::SArray(SArray &&other) noexcept
-    : Array<ParserT>{std::move(other)},
+    : Array<ParserT, EnableCallbackTag>{std::move(other)},
       _values{std::move(other._values)} {
-   if constexpr (EnableCallbackTag::value) {
+   if constexpr (EnableCallback) {
       _on_finish = std::move(other._on_finish);
    }
 }
 
 template <typename ParserT, typename EnableCallbackTag>
 SArray<ParserT, EnableCallbackTag> &SArray<ParserT, EnableCallbackTag>::operator=(SArray &&other) noexcept {
-  Array<ParserT>::operator=(std::move(other));
+  Array<ParserT, EnableCallbackTag>::operator=(std::move(other));
   _values = std::move(other._values);
-   if constexpr (EnableCallbackTag::value) {
+   if constexpr (EnableCallback) {
     _on_finish = std::move(other._on_finish);
    }
 
@@ -193,12 +189,12 @@ typename SArray<ParserT, EnableCallbackTag>::ValueType &&SArray<ParserT, EnableC
 
 template <typename ParserT, typename EnableCallbackTag>
 void SArray<ParserT, EnableCallbackTag>::childParsed() {
-  _values.push_back(Array<ParserT>::parser().pop());
+  _values.push_back(Array<ParserT, EnableCallbackTag>::parser().pop());
 }
 
 template <typename ParserT, typename EnableCallbackTag>
 void SArray<ParserT, EnableCallbackTag>::finish() {
-  if constexpr (EnableCallbackTag::value) {
+  if constexpr (EnableCallback) {
     if (_on_finish && !_on_finish(_values)) {
       throw std::runtime_error("Callback returned false");
     }

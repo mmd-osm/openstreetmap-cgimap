@@ -27,6 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <variant>
 
 #include "map.h"
+#include "internals/traits.h"
 
 namespace SJParser {
 
@@ -40,8 +41,9 @@ namespace SJParser {
  * @anchor SMap_T
  */
 
-template <typename ParserT, bool EnableCallback = true> class SMap : public Map<ParserT> {
+template <typename ParserT, typename EnableCallbackTag = std::true_type> class SMap : public Map<ParserT, EnableCallbackTag> {
  public:
+  static constexpr bool EnableCallback = EnableCallbackTag::value;
   /** Element's value parser type. */
   using ParserType = std::decay_t<ParserT>;
 
@@ -54,6 +56,10 @@ template <typename ParserT, bool EnableCallback = true> class SMap : public Map<
 
   /** Finish callback type. */
   using Callback = std::conditional_t<EnableCallback, std::function<bool(SMap<ParserT> &)>, std::nullptr_t>;
+
+  explicit SMap(ParserT &&parser, DisableCallback)
+      requires (std::is_base_of_v<TokenParser, ParserType>)
+      : Map<ParserT, EnableCallbackTag>(std::forward<ParserT>(parser)) {}
 
   /** @brief Constructor.
    *
@@ -98,7 +104,7 @@ template <typename ParserT, bool EnableCallback = true> class SMap : public Map<
   SMap(SMap &&other) noexcept;
 
   /** Move assignment operator */
-  SMap<ParserT, EnableCallback> &operator=(SMap &&other) noexcept;
+  SMap<ParserT, EnableCallbackTag> &operator=(SMap &&other) noexcept;
 
   /** @cond INTERNAL Boilerplate. */
   ~SMap() override = default;
@@ -163,29 +169,29 @@ template <typename ParserT> SMap(ParserT &&) -> SMap<ParserT>;
 
 /****************************** Implementations *******************************/
 
-template <typename ParserT, bool EnableCallback>
+template <typename ParserT, typename EnableCallbackTag>
 template <typename CallbackT>
-SMap<ParserT, EnableCallback>::SMap(
+SMap<ParserT, EnableCallbackTag>::SMap(
     ParserT &&parser, CallbackT on_finish)
     requires std::is_constructible_v<Callback, CallbackT>
     : SMap{std::forward<ParserT>(parser), nullptr, std::move(on_finish)} {}
 
-template <typename ParserT, bool EnableCallback>
+template <typename ParserT, typename EnableCallbackTag>
 template <typename ElementCallbackT, typename CallbackT>
-SMap<ParserT, EnableCallback>::SMap(ParserT &&parser, ElementCallbackT on_element,
+SMap<ParserT, EnableCallbackTag>::SMap(ParserT &&parser, ElementCallbackT on_element,
                     CallbackT on_finish)
     requires (std::is_constructible_v<Callback, CallbackT> &&
               std::is_constructible_v<ElementCallback, ElementCallbackT> &&
               std::is_base_of_v<TokenParser, ParserType>)
-    : Map<ParserT>{std::forward<ParserT>(parser)} {
+    : Map<ParserT, EnableCallbackTag>{std::forward<ParserT>(parser)} {
    if constexpr (EnableCallback) {
       _on_element = std::move(on_element);
       _on_finish = std::move(on_finish);
    }
 }
 
-template <typename ParserT, bool EnableCallback>
-SMap<ParserT, EnableCallback>::SMap(SMap &&other) noexcept
+template <typename ParserT, typename EnableCallbackTag>
+SMap<ParserT, EnableCallbackTag>::SMap(SMap &&other) noexcept
     : Map<ParserT>{std::move(other)},
       _values{std::move(other._values)} {
   if constexpr (EnableCallback) {
@@ -194,8 +200,8 @@ SMap<ParserT, EnableCallback>::SMap(SMap &&other) noexcept
   }
 }
 
-template <typename ParserT, bool EnableCallback>
-SMap<ParserT, EnableCallback> &SMap<ParserT, EnableCallback>::operator=(SMap &&other) noexcept {
+template <typename ParserT, typename EnableCallbackTag>
+SMap<ParserT, EnableCallbackTag> &SMap<ParserT, EnableCallbackTag>::operator=(SMap &&other) noexcept {
   Map<ParserT>::operator=(std::move(other));
   _values = std::move(other._values);
    if constexpr (EnableCallback) {
@@ -206,31 +212,31 @@ SMap<ParserT, EnableCallback> &SMap<ParserT, EnableCallback>::operator=(SMap &&o
   return *this;
 }
 
-template <typename ParserT, bool EnableCallback>
-void SMap<ParserT, EnableCallback>::setElementCallback(ElementCallback on_element) requires EnableCallback {
+template <typename ParserT, typename EnableCallbackTag>
+void SMap<ParserT, EnableCallbackTag>::setElementCallback(ElementCallback on_element) requires EnableCallback {
   _on_element = on_element;
 }
 
-template <typename ParserT, bool EnableCallback>
-void SMap<ParserT, EnableCallback>::setFinishCallback(Callback on_finish) requires EnableCallback {
+template <typename ParserT, typename EnableCallbackTag>
+void SMap<ParserT, EnableCallbackTag>::setFinishCallback(Callback on_finish) requires EnableCallback {
   _on_finish = on_finish;
 }
 
-template <typename ParserT, bool EnableCallback>
-const typename SMap<ParserT, EnableCallback>::ValueType &SMap<ParserT, EnableCallback>::get() const {
+template <typename ParserT, typename EnableCallbackTag>
+const typename SMap<ParserT, EnableCallbackTag>::ValueType &SMap<ParserT, EnableCallbackTag>::get() const {
   TokenParser::checkSet();
   return _values;
 }
 
-template <typename ParserT, bool EnableCallback>
-typename SMap<ParserT, EnableCallback>::ValueType &&SMap<ParserT, EnableCallback>::pop() {
+template <typename ParserT, typename EnableCallbackTag>
+typename SMap<ParserT, EnableCallbackTag>::ValueType &&SMap<ParserT, EnableCallbackTag>::pop() {
   TokenParser::checkSet();
   TokenParser::unset();
   return std::move(_values);
 }
 
-template <typename ParserT, bool EnableCallback>
-void SMap<ParserT, EnableCallback>::childParsed() {
+template <typename ParserT, typename EnableCallbackTag>
+void SMap<ParserT, EnableCallbackTag>::childParsed() {
   if constexpr (EnableCallback) {
     if (_on_element
         && !_on_element(Map<ParserT>::currentKey(), Map<ParserT>::parser())) {
@@ -241,8 +247,8 @@ void SMap<ParserT, EnableCallback>::childParsed() {
                            Map<ParserT>::parser().pop());
 }
 
-template <typename ParserT, bool EnableCallback>
-void SMap<ParserT, EnableCallback>::finish() {
+template <typename ParserT, typename EnableCallbackTag>
+void SMap<ParserT, EnableCallbackTag>::finish() {
   if constexpr (EnableCallback) {
     if (_on_finish && !_on_finish(*this)) {
       throw std::runtime_error("Callback returned false");
@@ -250,8 +256,8 @@ void SMap<ParserT, EnableCallback>::finish() {
   }
 }
 
-template <typename ParserT, bool EnableCallback>
-void SMap<ParserT, EnableCallback>::reset() {
+template <typename ParserT, typename EnableCallbackTag>
+void SMap<ParserT, EnableCallbackTag>::reset() {
   TokenParser::reset();
   _values = {};
 }

@@ -32,4 +32,8 @@ concept HasValueType = requires { typename std::decay_t<T>::ValueType; };
 
 template <typename ParserT>
 constexpr bool IsStorageParser = HasValueType<ParserT>;
+
+struct EnableCallback : std::true_type {};
+struct DisableCallback : std::false_type {};
+
 }  // namespace SJParser

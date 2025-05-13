@@ -27,6 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <variant>
 
 #include "internals/token_parser.h"
+#include "internals/traits.h"
 
 namespace SJParser {
 
@@ -35,14 +36,18 @@ namespace SJParser {
  * @tparam ValueT JSON value type, can be std::string, int64_t, bool or double
  */
 
-template <typename ValueT, bool EnableCallback = true> class Value : public TokenParser {
+template <typename ValueT, typename EnableCallbackTag = std::true_type> class Value : public TokenParser {
  public:
+  static constexpr bool EnableCallback = EnableCallbackTag::value;
+
   /** Underlying type, that can be obtained from this parser with #get or #pop.
    */
   using ValueType = ValueT;
 
   /** Finish callback type. */
   using Callback = std::conditional_t<EnableCallback, std::function<bool(const ValueType &)>, std::nullptr_t>;
+
+  explicit Value(DisableCallback) : Value(nullptr) {};
 
   /** @brief Constructor.
    *
@@ -52,13 +57,14 @@ template <typename ValueT, bool EnableCallback = true> class Value : public Toke
    * argument.
    * If the callback returns false, parsing will be stopped with an error.
    */
+
   explicit Value(Callback on_finish = nullptr);
 
   /** Move constructor. */
   Value(Value &&other) noexcept;
 
   /** Move assignment operator */
-  Value<ValueT, EnableCallback> &operator=(Value &&other) noexcept;
+  Value<ValueT, EnableCallbackTag> &operator=(Value &&other) noexcept;
 
   /** @cond INTERNAL Boilerplate. */
   ~Value() override = default;
@@ -106,14 +112,14 @@ template <typename ValueT, bool EnableCallback = true> class Value : public Toke
   std::conditional_t<EnableCallback, Callback, std::monostate> _on_finish{};
 };
 
-extern template class Value<int64_t>;
-extern template class Value<bool>;
-extern template class Value<double>;
-extern template class Value<std::string>;
+extern template class Value<int64_t, std::true_type>;
+extern template class Value<bool, std::true_type>;
+extern template class Value<double, std::true_type>;
+extern template class Value<std::string, std::true_type>;
 
-extern template class Value<int64_t, false>;
-extern template class Value<bool, false>;
-extern template class Value<double, false>;
-extern template class Value<std::string, false>;
+extern template class Value<int64_t, std::false_type>;
+extern template class Value<bool, std::false_type>;
+extern template class Value<double, std::false_type>;
+extern template class Value<std::string, std::false_type>;
 
 }  // namespace SJParser
