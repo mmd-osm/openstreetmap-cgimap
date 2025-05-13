@@ -47,8 +47,6 @@ template <typename ValueT, typename EnableCallbackTag = std::true_type> class Op
   /** Finish callback type. */
   using Callback = std::conditional_t<EnableCallback, std::function<bool(const ValueType &)>, std::nullptr_t>;
 
-  explicit OptionalValue(DisableCallback) : OptionalValue(nullptr) {};
-
   /** @brief Constructor.
    *
    * @param [in] on_finish (optional) Callback, that will be called after a
