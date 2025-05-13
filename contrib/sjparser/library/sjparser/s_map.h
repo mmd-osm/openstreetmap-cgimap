@@ -167,6 +167,8 @@ template <typename ParserT> SMap(SMap<ParserT> &) -> SMap<SMap<ParserT> &>;
 
 template <typename ParserT> SMap(ParserT &&) -> SMap<ParserT>;
 
+template <typename ParserT> SMap(ParserT &&, DisableCallback) -> SMap<ParserT, DisableCallback>;
+
 /****************************** Implementations *******************************/
 
 template <typename ParserT, typename EnableCallbackTag>
@@ -192,7 +194,7 @@ SMap<ParserT, EnableCallbackTag>::SMap(ParserT &&parser, ElementCallbackT on_ele
 
 template <typename ParserT, typename EnableCallbackTag>
 SMap<ParserT, EnableCallbackTag>::SMap(SMap &&other) noexcept
-    : Map<ParserT>{std::move(other)},
+    : Map<ParserT, EnableCallbackTag>{std::move(other)},
       _values{std::move(other._values)} {
   if constexpr (EnableCallback) {
       _on_element = std::move(other._on_element);
@@ -202,7 +204,7 @@ SMap<ParserT, EnableCallbackTag>::SMap(SMap &&other) noexcept
 
 template <typename ParserT, typename EnableCallbackTag>
 SMap<ParserT, EnableCallbackTag> &SMap<ParserT, EnableCallbackTag>::operator=(SMap &&other) noexcept {
-  Map<ParserT>::operator=(std::move(other));
+  Map<ParserT, EnableCallbackTag>::operator=(std::move(other));
   _values = std::move(other._values);
    if constexpr (EnableCallback) {
     _on_element = std::move(other._on_element);
@@ -243,8 +245,8 @@ void SMap<ParserT, EnableCallbackTag>::childParsed() {
       throw std::runtime_error("Element callback returned false");
     }
   }
-  _values.insert_or_assign(Map<ParserT>::currentKey(),
-                           Map<ParserT>::parser().pop());
+  _values.insert_or_assign(Map<ParserT, EnableCallbackTag>::currentKey(),
+                           Map<ParserT, EnableCallbackTag>::parser().pop());
 }
 
 template <typename ParserT, typename EnableCallbackTag>
