@@ -84,8 +84,7 @@ class OSMChangeJSONParserFormat {
       };
   }
 
-  template <typename ActionElementsParserCallback = std::nullptr_t>
-  static auto getActionElementsParser(ActionElementsParserCallback action_elements_parser_callback = nullptr) {
+  static auto getActionElementsParser() {
     using enum operation;
     return Object{
           std::tuple{
@@ -93,19 +92,17 @@ class OSMChangeJSONParserFormat {
             Member{"elements", SArray{getElementsParser(), DisableCallback{}}},
             Member{"if-unused", Value<bool, noCB>{}, Optional},
           },
-        ObjectOptions{Reaction::Ignore},
-        action_elements_parser_callback
+        ObjectOptions{Reaction::Ignore}
         };
   }
 
-  template <typename ActionElementsParserCallback = std::nullptr_t>
-  static auto getMainParser(ActionElementsParserCallback action_elements_parser_callback = nullptr) {
+  static auto getMainParser() {
     return Parser{
        Object{
         std::tuple{
           Member{"version", Value<std::string>{check_version_callback}},
           Member{"generator", Value<std::string, noCB>{}, Optional},
-          Member{"osmChange", Array{getActionElementsParser(action_elements_parser_callback)}}
+          Member{"osmChange", Array{getActionElementsParser()}}
         },
         ObjectOptions{Reaction::Ignore}
       }};
@@ -132,10 +129,12 @@ public:
   void process_message(const std::string &data) {
 
     try {
-      auto json_parser{ api06::OSMChangeJSONParserFormat::getMainParser(
-          [this](auto &parser) {
+
+      auto json_parser{api06::OSMChangeJSONParserFormat::getMainParser()};
+
+      json_parser.parser().get<2>().parser().setFinishCallback([this](auto &parser) {
             return this->process_action_elements(parser);
-          }) };
+          } );
 
       m_callback.start_document();
       json_parser.parse(data);
