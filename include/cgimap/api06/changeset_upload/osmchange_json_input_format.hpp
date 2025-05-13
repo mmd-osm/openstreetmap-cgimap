@@ -104,7 +104,7 @@ class OSMChangeJSONParserFormat {
        Object{
         std::tuple{
           Member{"version", Value<std::string>{check_version_callback}},
-          Member{"generator", Value<std::string, std::false_type>{}, Optional},
+          Member{"generator", Value<std::string, noCB>{}, Optional},
           Member{"osmChange", Array{getActionElementsParser(action_elements_parser_callback)}}
         },
         ObjectOptions{Reaction::Ignore}
