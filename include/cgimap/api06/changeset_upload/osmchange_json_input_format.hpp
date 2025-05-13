@@ -60,23 +60,23 @@ class OSMChangeJSONParserFormat {
 
   static auto getMemberParser() {
 
-    return SAutoObject{std::tuple{Member{"type", Value<std::string>{DisableCallback{}}},
-                                  Member{"ref", Value<int64_t>{DisableCallback{}}},
-                                  Member{"role", Value<std::string>{DisableCallback{}}, Optional, ""}}
+    return SAutoObject{std::tuple{Member{"type", Value<std::string, std::false_type>{}},
+                                  Member{"ref", Value<int64_t, std::false_type>{}},
+                                  Member{"role", Value<std::string, std::false_type>{}, Optional, ""}}
                                   };
   }
 
   static auto getElementsParser() {
     return SAutoObject{
           std::tuple{
-            Member{"type", Value<std::string>(DisableCallback{})},
-            Member{"id", Value<int64_t>{DisableCallback{}}},
-            Member{"lat", OptionalValue<double>{DisableCallback{}}, Optional, std::optional<double>{}},
-            Member{"lon", OptionalValue<double>{DisableCallback{}}, Optional, std::optional<double>{}},
-            Member{"version", OptionalValue<int64_t>{DisableCallback{}}, Optional, std::optional<int64_t>{}},
-            Member{"changeset", Value<int64_t>{DisableCallback{}}},
-            Member{"tags", SMap{Value<std::string>{DisableCallback{}}}, Optional, std::map<std::string, std::string>{}},
-            Member{"nodes", SArray(Value<int64_t>{DisableCallback{}}, DisableCallback{}), Optional, std::vector<int64_t>{}},
+            Member{"type", Value<std::string, std::false_type>{}},
+            Member{"id", Value<int64_t, std::false_type>{}},
+            Member{"lat", OptionalValue<double, std::false_type>{}, Optional, std::optional<double>{}},
+            Member{"lon", OptionalValue<double, std::false_type>{}, Optional, std::optional<double>{}},
+            Member{"version", OptionalValue<int64_t, std::false_type>{}, Optional, std::optional<int64_t>{}},
+            Member{"changeset", Value<int64_t, std::false_type>{}},
+            Member{"tags", SMap{Value<std::string, std::false_type>{}, DisableCallback{}}, Optional, std::map<std::string, std::string>{}},
+            Member{"nodes", SArray(Value<int64_t, std::false_type>{}, DisableCallback{}), Optional, std::vector<int64_t>{}},
             Member{"members", SArray(getMemberParser(), DisableCallback{}), Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
           }
       };
@@ -87,9 +87,9 @@ class OSMChangeJSONParserFormat {
     using enum operation;
     return Object{
           std::tuple{
-            Member{"action", Value<std::string>{DisableCallback{}}},
+            Member{"action", Value<std::string, std::false_type>{}},
             Member{"elements", SArray{getElementsParser(), DisableCallback{}}},
-            Member{"if-unused", Value<bool>{DisableCallback{}}, Optional},
+            Member{"if-unused", Value<bool, std::false_type>{}, Optional},
           },
         ObjectOptions{Reaction::Ignore},
         action_elements_parser_callback
