@@ -44,11 +44,9 @@ using SJParser::Reaction;
 using SJParser::ObjectOptions;
 using SJParser::Presence::Optional;
 using SJParser::Ignore;
-using SJParser::DisableCallback;
 
 
 class OSMChangeJSONParserFormat {
-   using noCB = std::false_type;  // marker: (Optional)Value does not require a callback function
 
   [[nodiscard]] static bool check_version_callback(const std::string& version) {
 
@@ -60,27 +58,25 @@ class OSMChangeJSONParserFormat {
 
   static auto getMemberParser() {
 
-    return SAutoObject{std::tuple{Member{"type", Value<std::string, noCB>{}},
-                                  Member{"ref", Value<int64_t, noCB>{}},
-                                  Member{"role", Value<std::string, noCB>{}, Optional, ""}},
-                                  DisableCallback{}
+    return SAutoObject{std::tuple{Member{"type", Value<std::string>{}},
+                                  Member{"ref", Value<int64_t>{}},
+                                  Member{"role", Value<std::string>{}, Optional}}
                                   };
   }
 
   static auto getElementsParser() {
     return SAutoObject{
           std::tuple{
-            Member{"type", Value<std::string, noCB>{}},
-            Member{"id", Value<int64_t, noCB>{}},
-            Member{"lat", OptionalValue<double, noCB>{}, Optional, std::optional<double>{}},
-            Member{"lon", OptionalValue<double, noCB>{}, Optional, std::optional<double>{}},
-            Member{"version", OptionalValue<int64_t, noCB>{}, Optional, std::optional<int64_t>{}},
-            Member{"changeset", Value<int64_t, noCB>{}},
-            Member{"tags", SMap{Value<std::string, noCB>{}, DisableCallback{}}, Optional, std::map<std::string, std::string>{}},
-            Member{"nodes", SArray(Value<int64_t, noCB>{}, DisableCallback{}), Optional, std::vector<int64_t>{}},
-            Member{"members", SArray(getMemberParser(), DisableCallback{}), Optional, std::vector<std::tuple<std::string, int64_t, std::string>>{}},
-          },
-          DisableCallback{}
+            Member{"type", Value<std::string>{}},
+            Member{"id", Value<int64_t>{}},
+            Member{"lat", OptionalValue<double>{}, Optional},
+            Member{"lon", OptionalValue<double>{}, Optional},
+            Member{"version", OptionalValue<int64_t>{}, Optional},
+            Member{"changeset", Value<int64_t>{}},
+            Member{"tags", SMap{Value<std::string>{}}, Optional},
+            Member{"nodes", SArray(Value<int64_t>{}), Optional},
+            Member{"members", SArray(getMemberParser()), Optional},
+          }
       };
   }
 
@@ -88,9 +84,9 @@ class OSMChangeJSONParserFormat {
     using enum operation;
     return Object{
           std::tuple{
-            Member{"action", Value<std::string, noCB>{}},
-            Member{"elements", SArray{getElementsParser(), DisableCallback{}}},
-            Member{"if-unused", Value<bool, noCB>{}, Optional},
+            Member{"action", Value<std::string>{}},
+            Member{"elements", SArray{getElementsParser()}},
+            Member{"if-unused", Value<bool>{}, Optional},
           },
         ObjectOptions{Reaction::Ignore}
         };
@@ -100,8 +96,8 @@ class OSMChangeJSONParserFormat {
     return Parser{
        Object{
         std::tuple{
-          Member{"version", Value<std::string>{check_version_callback}},
-          Member{"generator", Value<std::string, noCB>{}, Optional},
+          Member{"version", SJParser::Value<std::string>{check_version_callback}},
+          Member{"generator", Value<std::string>{}, Optional},
           Member{"osmChange", Array{getActionElementsParser()}}
         },
         ObjectOptions{Reaction::Ignore}
@@ -202,10 +198,12 @@ private:
   }
 
   void process_elements(ActionElementsParser &parser) {
-    for (const auto& element : parser.get<1>()) {
+
+    for (const auto& element : parser.parser<1>().get()) {
       element_count++;
       process_type(element);
     }
+
   }
 
   void process_type(auto& element) {
