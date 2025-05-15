@@ -171,7 +171,7 @@ TEST_CASE("osmchange: create invalid object", "[osmchange][json]") {
 // NODE TESTS
 
 TEST_CASE("Create empty node without details", "[osmchange][node][json]") {
-  REQUIRE_THROWS_AS(process_testmsg(R"({"osmChange": [{ "type": "node", "action": "create"}]})"), http::bad_request);
+  REQUIRE_THROWS_AS(process_testmsg(R"({"osmChange": {"create" : [{ "type": "node" }]}})"), http::bad_request);
 }
 
 TEST_CASE("Create node, details except changeset info missing", "[osmchange][node][json]") {
@@ -591,13 +591,13 @@ TEST_CASE("Invalid data", "[osmchange][json]") {
 TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
 
   // Test JSON processing with a very large message
-  std::stringstream s;
+  std::string s;
 
-  s << R"(
+  s = R"(
       {
         "version": "0.6",
         "generator": "demo",
-        "osmChange": [  
+        "osmChange": [
      )";
 
   Test_Parser_Callback cb{};
@@ -605,7 +605,7 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
   for (int i = 1; i < 100000; i++) {
 
     if (i > 1) {
-      s << ",\n";
+      s += ",\n";
     }
 
     api06::Node node;
@@ -621,17 +621,21 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
 
       cb.nodes.emplace_back(node, operation::op_create, false);
 
-      s << fmt::format(R"(
+      s += fmt::format(R"(
           {{
-            "type": "node",
             "action": "{}",
-            "id": {},
-            "lat": 1,
-            "lon": 2,
-            "changeset": 123,
-            "tags": {{
-              "some key": "some value"
-            }}
+            "elements": [
+             {{
+              "type": "node",
+              "id": {},
+              "lat": 1,
+              "lon": 2,
+              "changeset": 123,
+              "tags": {{
+                "some key": "some value"
+              }}
+             }}
+            ]
           }}
          )", "create", -i);
 
@@ -644,18 +648,22 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
 
       cb.nodes.emplace_back(node, operation::op_modify, false);
 
-      s << fmt::format(R"(
+      s += fmt::format(R"(
           {{
-            "type": "node",
             "action": "{}",
-            "id": {},
-            "lat": 1,
-            "lon": 2,
-            "version": 1,
-            "changeset": 123,
-            "tags": {{
-              "some key": "some value"
-            }}
+            "elements": [
+             {{
+              "type": "node",
+              "id": {},
+              "lat": 1,
+              "lon": 2,
+              "version": 1,
+              "changeset": 123,
+              "tags": {{
+                "some key": "some value"
+              }}
+             }}
+            ]
           }}
          )", "modify", -i);
       break;
@@ -664,16 +672,20 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
       node.set_version(1);
       cb.nodes.emplace_back(node, operation::op_delete, false);
 
-      s << fmt::format(R"(
+      s += fmt::format(R"(
           {{
-            "type": "node",
             "action": "{}",
-            "id": {},
-            "version": 1,
-            "changeset": 123,
-            "tags": {{
-              "some key": "some value"
-            }}
+            "elements": [
+             {{
+              "type": "node",
+              "id": {},
+              "version": 1,
+              "changeset": 123,
+              "tags": {{
+                "some key": "some value"
+              }}
+             }}
+            ]
           }}
          )", "delete", -i);
 
@@ -682,12 +694,12 @@ TEST_CASE("Very large JSON message", "[osmchange][node][json]") {
     }
   }
 
-  s << R"(
+  s += R"(
         ]
       }
     )";
 
-  REQUIRE_NOTHROW(process_testmsg(s.str(), cb));
+  REQUIRE_NOTHROW(process_testmsg(s, cb));
 
 }
 
@@ -776,20 +788,24 @@ TEST_CASE("Create node", "[osmchange][node][json]") {
         "version": "0.6",
         "generator": "demo",
         "osmChange": [
-          {
-            "type": "node",
-            "action": "create",
-            "id": -1,
-            "lat": 42.7957187,
-            "lon": 13.5690032,
-            "changeset": 124176968,
-            "tags": {
-              "man_made": "mast",
-              "name": "Monte Piselli - San Giacomo"
+         {
+          "action": "create",
+          "elements" : [
+            {
+              "type": "node",
+              "id": -1,
+              "lat": 42.7957187,
+              "lon": 13.5690032,
+              "changeset": 124176968,
+              "tags": {
+                "man_made": "mast",
+                "name": "Monte Piselli - San Giacomo"
+              }
             }
-          }
-        ]
-      }
+          ]
+         }
+       ]
+     }
     )", cb));
 }
 
@@ -811,18 +827,22 @@ TEST_CASE("Create way", "[osmchange][way][json]") {
         "version": "0.6",
         "generator": "demo",
         "osmChange": [
-          {
-            "type": "way",
-            "action": "create",
-            "id": -1,
-            "changeset": 124176968,
-            "nodes": [1,2,3,4],
-            "tags": {
-              "highway": "residential",
-              "name": "Via Monte"
+         {
+          "action": "create",
+          "elements" : [
+            {
+              "type": "way",
+              "id": -1,
+              "changeset": 124176968,
+              "nodes": [1,2,3,4],
+              "tags": {
+                "highway": "residential",
+                "name": "Via Monte"
+              }
             }
-          }
-        ]
+          ]
+        }
+       ]
       }
     )", cb));
 }
@@ -845,23 +865,27 @@ TEST_CASE("Create relation", "[osmchange][relation][json]") {
         "version": "0.6",
         "generator": "demo",
         "osmChange": [
-          {
-            "type": "relation",
-            "action": "create",
-            "id": -1,
-            "changeset": 124176968,
-            "members": [
-                          {"type": "Node", "ref": -1, "role": "stop"},
-                          {"type": "Way", "ref": -2},
-                          {"type": "Relation", "ref": -3, "role": "parent"}
-                       ],
-            "tags": {
-              "ref": "123",
-              "route": "bus",
-              "ref": "23"
+         {
+          "action": "create",
+          "elements" : [
+            {
+              "type": "relation",
+              "id": -1,
+              "changeset": 124176968,
+              "members": [
+                            {"type": "node", "ref": -1, "role": "stop"},
+                            {"type": "way", "ref": -2},
+                            {"type": "relation", "ref": -3, "role": "parent"}
+                        ],
+              "tags": {
+                "ref": "123",
+                "route": "bus",
+                "ref": "23"
+              }
             }
-          }
-        ]
+          ]
+        }
+       ]
       }
     )", cb));
 }
